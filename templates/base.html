@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es" data-ambience="caribbean-day">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Paseo Macuto - Guía Turística, Gastronómica y Comercial frente al Mar Caribe en La Guaira, Venezuela.">
+    <title>{% block title %}Paseo Macuto | La Guaira • Venezuela{% endblock %}</title>
+
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- Leaflet CSS 1.9.4 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <!-- Estilos de Ambientación Playera -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/beach_ambience.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- -------------------------------------------------------------
+         BARRA SUPERIOR (HEADER) PLAYERA
+         ------------------------------------------------------------- -->
+    <header class="beach-navbar">
+        <a href="{{ url_for('index') }}" class="beach-brand">
+            <div class="beach-brand-logo">
+                <i class="fas fa-water"></i>
+            </div>
+            <div class="beach-brand-text">
+                <h1>Paseo Macuto</h1>
+                <span>{{ location_name }}</span>
+            </div>
+        </a>
+
+        <!-- SELECTOR DE AMBIENTACIÓN PLAYERA (3 MODOS DE LUZ) -->
+        <div class="ambience-selector" title="Seleccionar iluminación playera">
+            <button class="ambience-btn active" data-mode="caribbean-day" title="Modo Día Soleado Caribeño">
+                <i class="fas fa-sun" style="color:#F59E0B;"></i> Sol Caribeño
+            </button>
+            <button class="ambience-btn" data-mode="golden-hour" title="Modo Atardecer Dorado / Golden Hour">
+                <i class="fas fa-cloud-sun" style="color:#E76F51;"></i> Atardecer Dorado
+            </button>
+            <button class="ambience-btn" data-mode="tropical-night" title="Modo Noche Marina Tropical">
+                <i class="fas fa-moon" style="color:#00F5D4;"></i> Noche Marina
+            </button>
+        </div>
+
+        <!-- WIDGETS DE CABECERA (BCV Y ACCESO) -->
+        <div class="header-badges-group">
+            <div class="beach-pill-badge badge-bcv" title="Tasa oficial del Banco Central de Venezuela">
+                <i class="fas fa-coins"></i>
+                <span>Tasa BCV:</span>
+                <span class="rate">{{ bcv_rate_formatted }} <small>Bs/$</small></span>
+            </div>
+            
+            <a href="/" class="beach-btn-outline" title="Volver al inicio">
+                <i class="fas fa-home"></i> Inicio
+            </a>
+        </div>
+    </header>
+
+    <!-- -------------------------------------------------------------
+         CONTENIDO PRINCIPAL
+         ------------------------------------------------------------- -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- -------------------------------------------------------------
+         PIE DE PÁGINA PLAYERO
+         ------------------------------------------------------------- -->
+    <footer class="beach-footer">
+        <div class="beach-footer-content">
+            <div style="font-size:24px; color:var(--sea-bright); margin-bottom:10px;">
+                <i class="fas fa-umbrella-beach"></i>
+            </div>
+            <h3 style="font-weight:800; font-size:16px;">Paseo Macuto • La Guaira</h3>
+            <p>Plataforma Turística y Comercial del Malecón costero. Creada con Python (Flask) y ambientación marina caribeña.</p>
+            <p style="font-size:12px; margin-top:14px; opacity:0.75;">© {{ current_year }} Paseo Macuto • Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/beach_ambience.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

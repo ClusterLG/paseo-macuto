@@ -1,0 +1,46 @@
+<!-- Componente: Telemetría Costera y Estado de Mareas de Macuto -->
+<div class="coastal-weather-card">
+    <div class="weather-metric-item">
+        <div class="weather-metric-icon">
+            <i class="fas fa-sun"></i>
+        </div>
+        <div class="weather-metric-info">
+            <span class="label">Temperatura Aire</span>
+            <span class="val" id="weather-air-temp">{{ air_temp }}</span>
+            <span class="sub">La Guaira / Caribe</span>
+        </div>
+    </div>
+
+    <div class="weather-metric-item">
+        <div class="weather-metric-icon" style="color: var(--sea-bright);">
+            <i class="fas fa-water"></i>
+        </div>
+        <div class="weather-metric-info">
+            <span class="label">Temperatura Mar</span>
+            <span class="val" id="weather-water-temp">{{ sea_temp }}</span>
+            <span class="sub">Aguas cálidas y cristalinas</span>
+        </div>
+    </div>
+
+    <div class="weather-metric-item">
+        <div class="weather-metric-icon" style="color: var(--sand-primary);">
+            <i class="fas fa-arrows-alt-v"></i>
+        </div>
+        <div class="weather-metric-info">
+            <span class="label">Estado de Marea</span>
+            <span class="val" id="weather-tide-val">Pleamar</span>
+            <span class="sub">Ciclo costero activo</span>
+        </div>
+    </div>
+
+    <div class="weather-metric-item">
+        <div class="weather-metric-icon" style="color: var(--tropical-palm);">
+            <i class="fas fa-wind"></i>
+        </div>
+        <div class="weather-metric-info">
+            <span class="label">Oleaje & Viento</span>
+            <span class="val" id="weather-swell-val">0.9 m</span>
+            <span class="sub">Alisios del Este 19 km/h</span>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,755 @@
+/* ==========================================================================
+   PASEO MACUTO - SISTEMA DE AMBIENTACIÓN PLAYERA Y EXPERIENCIA COSTERA
+   3 Modos de Iluminación: Sol Caribeño, Atardecer Dorado y Noche Marina
+   Efectos de Oleaje Dinámico SVG y Widget Meteorológico Marino
+   ========================================================================== */
+
+/* -------------------------------------------------------------
+   VARIABLES DE COLOR Y TEMATIZACIÓN PLAYERA
+   ------------------------------------------------------------- */
+:root, [data-ambience="caribbean-day"] {
+    --theme-name: "Sol Caribeño";
+    --bg-sky: linear-gradient(180deg, #E0F7FA 0%, #B2EBF2 40%, #E8F5E9 100%);
+    --bg-primary: #F0F9FF;
+    --bg-surface: #FFFFFF;
+    --bg-glass: rgba(255, 255, 255, 0.88);
+    --border-beach: rgba(0, 150, 214, 0.18);
+    --border-highlight: #00B4D8;
+    
+    --text-main: #0B2545;
+    --text-muted: #4A6B82;
+    --text-accent: #0077B6;
+
+    /* Tonos Marinos y Arena */
+    --sea-deep: #0077B6;
+    --sea-mid: #0096C7;
+    --sea-bright: #00B4D8;
+    --sea-foam: #90E0EF;
+    --sea-crest: rgba(255, 255, 255, 0.85);
+    --sand-primary: #F4A261;
+    --sand-gold: #E76F51;
+    --sand-light: #FFE8D6;
+    --tropical-palm: #2A9D8F;
+    --coral-vibrant: #E63946;
+
+    /* Olas SVG */
+    --wave-layer-1: rgba(0, 119, 182, 0.70);
+    --wave-layer-2: rgba(0, 150, 199, 0.55);
+    --wave-layer-3: rgba(0, 180, 216, 0.40);
+    --wave-layer-4: rgba(144, 224, 239, 0.25);
+
+    --shadow-beach: 0 10px 30px rgba(0, 119, 182, 0.12);
+    --glow-beach: 0 0 20px rgba(0, 180, 216, 0.45);
+}
+
+/* Modo 2: Atardecer Dorado en La Guaira (Golden Hour) */
+[data-ambience="golden-hour"] {
+    --theme-name: "Atardecer Dorado";
+    --bg-sky: linear-gradient(180deg, #FF6B6B 0%, #FFA07A 40%, #FFE4B5 100%);
+    --bg-primary: #FFF5EB;
+    --bg-surface: #FFFFFF;
+    --bg-glass: rgba(255, 250, 245, 0.90);
+    --border-beach: rgba(231, 111, 81, 0.25);
+    --border-highlight: #E76F51;
+
+    --text-main: #2B1607;
+    --text-muted: #7A4B29;
+    --text-accent: #D9480F;
+
+    --sea-deep: #78290F;
+    --sea-mid: #C14953;
+    --sea-bright: #E07A5F;
+    --sea-foam: #F4A261;
+    --sea-crest: rgba(255, 235, 205, 0.9);
+    --sand-primary: #E76F51;
+    --sand-gold: #FFB703;
+    --sand-light: #FFDDA1;
+    --tropical-palm: #4D7C0F;
+    --coral-vibrant: #C9184A;
+
+    --wave-layer-1: rgba(120, 41, 15, 0.70);
+    --wave-layer-2: rgba(193, 73, 83, 0.55);
+    --wave-layer-3: rgba(224, 122, 95, 0.40);
+    --wave-layer-4: rgba(244, 162, 97, 0.28);
+
+    --shadow-beach: 0 10px 30px rgba(217, 72, 15, 0.16);
+    --glow-beach: 0 0 22px rgba(255, 138, 101, 0.55);
+}
+
+/* Modo 3: Noche Marina Tropical */
+[data-ambience="tropical-night"] {
+    --theme-name: "Noche Marina Tropical";
+    --bg-sky: linear-gradient(180deg, #030811 0%, #071326 50%, #0B2240 100%);
+    --bg-primary: #050E1A;
+    --bg-surface: #0B192C;
+    --bg-glass: rgba(11, 25, 44, 0.92);
+    --border-beach: rgba(0, 245, 212, 0.22);
+    --border-highlight: #00F5D4;
+
+    --text-main: #F0F8FF;
+    --text-muted: #8AA4BE;
+    --text-accent: #00F5D4;
+
+    --sea-deep: #021226;
+    --sea-mid: #05264A;
+    --sea-bright: #07477D;
+    --sea-foam: #00B4D8;
+    --sea-crest: rgba(0, 245, 212, 0.85);
+    --sand-primary: #9B5DE5;
+    --sand-gold: #F15BB5;
+    --sand-light: #1E3A5F;
+    --tropical-palm: #00BBF9;
+    --coral-vibrant: #F72585;
+
+    --wave-layer-1: rgba(2, 18, 38, 0.85);
+    --wave-layer-2: rgba(5, 38, 74, 0.70);
+    --wave-layer-3: rgba(7, 71, 125, 0.55);
+    --wave-layer-4: rgba(0, 180, 216, 0.35);
+
+    --shadow-beach: 0 10px 35px rgba(0, 0, 0, 0.70);
+    --glow-beach: 0 0 24px rgba(0, 245, 212, 0.50);
+}
+
+/* -------------------------------------------------------------
+   RESET Y ESTRUCTURA GENERAL
+   ------------------------------------------------------------- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transition: background-color 0.4s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* -------------------------------------------------------------
+   ENCABEZADO PLAYERO CON BARRA DE NAVEGACIÓN
+   ------------------------------------------------------------- */
+.beach-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-beach);
+    box-shadow: var(--shadow-beach);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.beach-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.beach-brand-logo {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--sea-bright), var(--tropical-palm));
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 22px;
+    box-shadow: var(--glow-beach);
+}
+
+.beach-brand-text h1 {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    color: var(--text-main);
+}
+
+.beach-brand-text span {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+/* -------------------------------------------------------------
+   SELECTOR DE AMBIENTACIÓN PLAYERA (3 MODOS)
+   ------------------------------------------------------------- */
+.ambience-selector {
+    display: flex;
+    align-items: center;
+    background: var(--bg-surface);
+    padding: 4px;
+    border-radius: 50px;
+    border: 1px solid var(--border-beach);
+    box-shadow: var(--shadow-beach);
+    gap: 4px;
+}
+
+.ambience-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.25s ease;
+}
+
+.ambience-btn:hover {
+    color: var(--text-main);
+    background: rgba(0, 180, 216, 0.10);
+}
+
+.ambience-btn.active {
+    background: linear-gradient(135deg, var(--sea-bright), var(--sea-deep));
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(0, 119, 182, 0.35);
+}
+
+[data-ambience="golden-hour"] .ambience-btn.active {
+    background: linear-gradient(135deg, #E76F51, #D9480F);
+    box-shadow: 0 4px 12px rgba(231, 111, 81, 0.40);
+}
+
+[data-ambience="tropical-night"] .ambience-btn.active {
+    background: linear-gradient(135deg, #00F5D4, #0077B6);
+    color: #030811;
+    box-shadow: 0 4px 12px rgba(0, 245, 212, 0.45);
+}
+
+/* -------------------------------------------------------------
+   WIDGETS SUPERIORES: TASA BCV Y CONDICIONES MARINAS
+   ------------------------------------------------------------- */
+.header-badges-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.beach-pill-badge {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-beach);
+    padding: 6px 14px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: var(--shadow-beach);
+}
+
+.beach-pill-badge i {
+    color: var(--sea-bright);
+}
+
+.badge-bcv {
+    border-color: rgba(6, 214, 160, 0.4);
+}
+
+.badge-bcv .rate {
+    font-weight: 800;
+    color: var(--tropical-palm);
+}
+
+/* -------------------------------------------------------------
+   HERO BANNER CON OLEAJE DINÁMICO SVG MULTICAPA
+   ------------------------------------------------------------- */
+.beach-hero-section {
+    position: relative;
+    padding: 45px 20px 100px;
+    background: var(--bg-sky);
+    overflow: hidden;
+    text-align: center;
+}
+
+.beach-hero-content {
+    position: relative;
+    z-index: 10;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.beach-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 50px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-beach);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--sea-deep);
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-beach);
+}
+
+.beach-hero-title {
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+    color: var(--text-main);
+}
+
+.beach-hero-title .highlight {
+    background: linear-gradient(135deg, var(--sea-deep), var(--sand-gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.beach-hero-subtitle {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 24px;
+}
+
+/* -------------------------------------------------------------
+   SISTEMA DE OLAS MARINAS SVG INTERACTIVAS
+   ------------------------------------------------------------- */
+.waves-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    overflow: hidden;
+    line-height: 0;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.waves-svg {
+    position: relative;
+    display: block;
+    width: calc(100% + 100px);
+    height: 110px;
+    min-height: 90px;
+    max-height: 140px;
+}
+
+/* Animaciones del oleaje continuo */
+.parallax-waves > use {
+    animation: moveWave 25s cubic-bezier(.55,.5,.45,.5) infinite;
+}
+
+.parallax-waves > use:nth-child(1) {
+    animation-delay: -2s;
+    animation-duration: 7s;
+    fill: var(--wave-layer-1);
+}
+
+.parallax-waves > use:nth-child(2) {
+    animation-delay: -3s;
+    animation-duration: 11s;
+    fill: var(--wave-layer-2);
+}
+
+.parallax-waves > use:nth-child(3) {
+    animation-delay: -4s;
+    animation-duration: 15s;
+    fill: var(--wave-layer-3);
+}
+
+.parallax-waves > use:nth-child(4) {
+    animation-delay: -5s;
+    animation-duration: 22s;
+    fill: var(--wave-layer-4);
+}
+
+@keyframes moveWave {
+    0% {
+        transform: translate3d(-90px, 0, 0);
+    }
+    50% {
+        transform: translate3d(85px, 0, 0);
+    }
+    100% {
+        transform: translate3d(-90px, 0, 0);
+    }
+}
+
+/* -------------------------------------------------------------
+   WIDGET METEOROLÓGICO Y DE MAREAS PLAYERO
+   ------------------------------------------------------------- */
+.coastal-weather-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-beach);
+    border-radius: 20px;
+    padding: 20px;
+    margin: -40px auto 30px;
+    max-width: 1000px;
+    width: calc(100% - 40px);
+    box-shadow: var(--shadow-beach);
+    position: relative;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.weather-metric-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: var(--bg-primary);
+    border: 1px solid rgba(0, 180, 216, 0.08);
+}
+
+.weather-metric-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--sea-bright);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.weather-metric-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.weather-metric-info .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.weather-metric-info .val {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.weather-metric-info .sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--tropical-palm);
+}
+
+/* -------------------------------------------------------------
+   CONTENEDOR PRINCIPAL Y FILTROS PLAYERO
+   ------------------------------------------------------------- */
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 50px;
+    width: 100%;
+}
+
+.beach-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 25px;
+    scrollbar-width: thin;
+}
+
+.filter-chip {
+    padding: 8px 18px;
+    border-radius: 50px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-beach);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.filter-chip:hover, .filter-chip.active {
+    background: var(--sea-deep);
+    color: #FFFFFF;
+    border-color: var(--sea-deep);
+    box-shadow: 0 4px 12px rgba(0, 119, 182, 0.25);
+}
+
+/* -------------------------------------------------------------
+   GRID DE COMERCIOS Y KIOSCOS DEL PASEO MACUTO
+   ------------------------------------------------------------- */
+.merchants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.beach-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-beach);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--shadow-beach);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.beach-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 36px rgba(0, 119, 182, 0.20);
+    border-color: var(--border-highlight);
+}
+
+.beach-card-img-wrapper {
+    position: relative;
+    height: 180px;
+    background: linear-gradient(135deg, var(--sea-mid), var(--sea-deep));
+    overflow: hidden;
+}
+
+.beach-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.beach-card:hover .beach-card-img {
+    transform: scale(1.06);
+}
+
+.beach-card-category-badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    color: #FFFFFF;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.beach-card-rating {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    background: var(--bg-surface);
+    padding: 4px 10px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #F59E0B;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.beach-card-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.beach-card-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text-main);
+}
+
+.beach-card-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+    flex-grow: 1;
+}
+
+.beach-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-beach);
+    gap: 10px;
+}
+
+.beach-btn-primary {
+    background: linear-gradient(135deg, var(--sea-bright), var(--sea-deep));
+    color: #FFFFFF;
+    padding: 8px 18px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 119, 182, 0.28);
+    transition: all 0.25s ease;
+}
+
+.beach-btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}
+
+.beach-btn-outline {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border-beach);
+    padding: 8px 14px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.beach-btn-outline:hover {
+    background: rgba(0, 180, 216, 0.12);
+    border-color: var(--border-highlight);
+}
+
+/* -------------------------------------------------------------
+   SECCIÓN DE NIVELES Y GAMIFICACIÓN TURÍSTICA
+   ------------------------------------------------------------- */
+.gamification-beach-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-beach);
+    border-radius: 24px;
+    padding: 30px 24px;
+    margin-top: 40px;
+    box-shadow: var(--shadow-beach);
+}
+
+.gamification-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.levels-horizontal-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.level-card-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-beach);
+    border-radius: 16px;
+    padding: 14px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.level-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.level-card-num {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.level-card-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+
+/* -------------------------------------------------------------
+   PIE DE PÁGINA COSTEÑO
+   ------------------------------------------------------------- */
+.beach-footer {
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-beach);
+    padding: 35px 20px 25px;
+    margin-top: auto;
+    text-align: center;
+}
+
+.beach-footer-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.beach-footer p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .beach-navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .header-badges-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .ambience-selector {
+        width: 100%;
+        justify-content: center;
+    }
+}

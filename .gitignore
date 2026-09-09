@@ -1,0 +1,10 @@
+# Gitignore para Paseo Macuto
+/data/*.sqlite
+/backup/*.json
+.env
+config/supabase_config.php
+.DS_Store
+Thumbs.db
+*.log
+__pycache__/
+*.pyc

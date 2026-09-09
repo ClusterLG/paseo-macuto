@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="Plataforma interactiva del Paseo Macuto en La Guaira, Venezuela. Directorio de comercios, mapa GIS acotado en alta definición, geolocalización, tasa oficial BCV y gamificación por niveles.">
+    <title>Paseo Macuto | Guía Turística y Comercial - La Guaira</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- Leaflet CSS 1.9.4 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    <!-- Estilos de la Plataforma -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/map.css">
+</head>
+<body>
+
+    <!-- -------------------------------------------------------------
+         BARRA SUPERIOR (HEADER) PLAYERA
+         ------------------------------------------------------------- -->
+    <header class="top-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <!-- BOTÓN PANEL RETRÁCTIL IZQUIERDO -->
+            <button class="btn-icon neon-glow-cyan" id="btn-sidebar-toggle" onclick="PaseoMacutoUI.toggleSidebar()" title="Abrir Panel Retráctil de Módulos">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="brand-section" onclick="PaseoMacutoMap.map.flyTo(PaseoMacutoMap.defaultCenter, 17)">
+                <div class="brand-icon">
+                    <i class="fas fa-water"></i>
+                </div>
+                <div class="brand-title">
+                    <h1>Paseo Macuto</h1>
+                    <span>La Guaira • Venezuela</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <!-- WIDGET TELEMETRÍA PLAYERA: MAREA, TEMPERATURA Y OLEAJE -->
+            <div class="coastal-weather-header-pill" id="coastal-weather-pill" title="Condiciones Marinas en Macuto: 27.4°C Mar • 30.5°C Aire • Oleaje 0.9m">
+                <i class="fas fa-umbrella-beach" style="color:var(--caribbean-cyan);"></i>
+                <span>Mar: <b id="header-sea-temp">27.4°C</b></span>
+                <span class="pill-divider">•</span>
+                <span>Marea: <b id="header-tide-status">Bajamar</b></span>
+                <span class="pill-divider">•</span>
+                <span>Olas: <b>0.9m</b></span>
+            </div>
+
+            <!-- SELECTOR DE AMBIENTACIÓN PLAYERA (3 MODOS DE LUZ) -->
+            <div class="ambience-selector-group" title="Ambiente de Iluminación Playera">
+                <button class="ambience-option-btn active" data-mode="caribbean-day" onclick="PaseoMacutoUI.setAmbience('caribbean-day')" title="Sol Caribeño (Día)">
+                    <i class="fas fa-sun" style="color:#F59E0B;"></i> <span>Sol Caribeño</span>
+                </button>
+                <button class="ambience-option-btn" data-mode="golden-hour" onclick="PaseoMacutoUI.setAmbience('golden-hour')" title="Atardecer Dorado (Golden Hour)">
+                    <i class="fas fa-cloud-sun" style="color:#E76F51;"></i> <span>Atardecer</span>
+                </button>
+                <button class="ambience-option-btn" data-mode="tropical-night" onclick="PaseoMacutoUI.setAmbience('tropical-night')" title="Noche Marina Tropical">
+                    <i class="fas fa-moon" style="color:#00F5D4;"></i> <span>Noche Marina</span>
+                </button>
+            </div>
+
+            <!-- TARJETA TASA BCV OFICIAL EN PARTE SUPERIOR DERECHA -->
+            <div class="bcv-widget-card" id="bcv-widget-trigger" onclick="PaseoMacutoUI.openBcvModal()" title="Tasa oficial BCV. Clic para auditar o modificar">
+                <span class="bcv-flag"></span>
+                <div class="bcv-content">
+                    <span class="bcv-label">Oficial BCV</span>
+                    <span class="bcv-rate" id="bcv-rate-value"><?= number_format($initialBcv, 2, ',', '.') ?> <small>Bs/$</small></span>
+                </div>
+            </div>
+
+            <!-- BOTÓN CARRITO DE COMPRAS CON CONTADOR NEÓN -->
+            <button class="btn-icon neon-glow-cyan" id="btn-cart-toggle" onclick="CartAndPagoMovil.openCartModal()" title="Mi Carrito de Compras" style="position:relative;">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-counter" class="badge-cart" style="display:none;">0</span>
+            </button>
+
+            <!-- ACCESO / PERFIL DE USUARIO (PANEL DE INICIO DE SESIÓN) -->
+            <button class="btn-secondary" id="btn-user-profile" style="padding: 6px 12px; border-radius: var(--radius-full);">
+                <i class="fas fa-sign-in-alt"></i> <span style="font-size:12px; font-weight:700;">Acceder</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- BANNER DE OLAS MARINAS DINÁMICAS SVG (EFECTO OLEAJE PLAYERO) -->
+    <div class="beach-waves-banner">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+            <defs>
+                <path id="gentle-wave-pm" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+            </defs>
+            <g class="banner-waves">
+                <use xlink:href="#gentle-wave-pm" x="48" y="0" />
+                <use xlink:href="#gentle-wave-pm" x="48" y="2" />
+                <use xlink:href="#gentle-wave-pm" x="48" y="4" />
+                <use xlink:href="#gentle-wave-pm" x="48" y="6" />
+            </g>
+        </svg>
+    </div>
+
+    <!-- BACKDROP PARA PANEL RETRÁCTIL LATERAL -->
+    <div class="sidebar-overlay-backdrop" id="sidebar-backdrop" onclick="PaseoMacutoUI.toggleSidebar(false)"></div>
+
+    <!-- PANEL RETRÁCTIL LATERAL IZQUIERDO -->
+    <aside id="left-retractable-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title-badge">
+                <i class="fas fa-cubes" style="color:var(--neon-cyan);"></i>
+                <span>Módulos de Usuario</span>
+            </div>
+            <button class="modal-close-btn" onclick="PaseoMacutoUI.toggleSidebar(false)">&times;</button>
+        </div>
+
+        <!-- CONTENEDOR DE PANELES EXCLUSIVOS POR ROL (SIN PESTAÑAS CRUZADAS) -->
+        <div class="sidebar-modules-container">
+            <!-- 1. PANEL EXCLUSIVO DEL SUPERADMINISTRADOR -->
+            <div class="sidebar-module-section" id="sidebar-panel-superadmin" style="display:none;">
+                <span class="sidebar-section-title"><i class="fas fa-crown" style="color:#F59E0B;"></i> Panel de Control Superusuario</span>
+                
+                <button class="neon-module-btn purple neon-glow-purple" onclick="PaseoMacutoUI.toggleSidebar(false); PaseoMacutoUI.openUserProfileAndHistory();">
+                    <i class="fas fa-id-card-alt" style="color:var(--neon-purple);"></i>
+                    <span>Mi Perfil & Dashboard Global</span>
+                    <span class="neon-btn-indicator">KPIs & Log <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn cyan" onclick="PaseoMacutoUI.openModuleView('admin_users')">
+                    <i class="fas fa-users" style="color:var(--neon-cyan);"></i>
+                    <span>Directorio de Usuarios</span>
+                    <span class="neon-btn-indicator">Cuentas <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn cyan" onclick="PaseoMacutoUI.openModuleView('admin_products')">
+                    <i class="fas fa-boxes" style="color:var(--neon-cyan);"></i>
+                    <span>Catálogo de Productos</span>
+                    <span class="neon-btn-indicator">Paseo <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn amber" onclick="PaseoMacutoUI.openModuleView('admin_incidents')">
+                    <i class="fas fa-exclamation-triangle" style="color:var(--neon-amber);"></i>
+                    <span>Incidencias y Reportes</span>
+                    <span class="neon-btn-indicator">Operativo <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn amber" onclick="PaseoMacutoUI.openModuleView('admin_denuncias')">
+                    <i class="fas fa-shield-alt" style="color:var(--neon-amber);"></i>
+                    <span>Denuncias de Usuarios</span>
+                    <span class="neon-btn-indicator">Auditoría <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn emerald" onclick="PaseoMacutoUI.openModuleView('admin_purchases')">
+                    <i class="fas fa-receipt" style="color:var(--neon-emerald);"></i>
+                    <span>Ventas y Compras Efectivas</span>
+                    <span class="neon-btn-indicator">Global <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn cyan" onclick="PaseoMacutoUI.openModuleView('admin_reviews')">
+                    <i class="fas fa-comments" style="color:var(--neon-cyan);"></i>
+                    <span>Comentarios & Reputaciones</span>
+                    <span class="neon-btn-indicator">Reseñas <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn purple" onclick="PaseoMacutoUI.openModuleView('admin_reputations')">
+                    <i class="fas fa-trophy" style="color:var(--neon-purple);"></i>
+                    <span>Ranking de Comercios</span>
+                    <span class="neon-btn-indicator">Reputación <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn emerald" onclick="PaseoMacutoUI.openBcvModal()">
+                    <i class="fas fa-dollar-sign" style="color:var(--neon-emerald);"></i>
+                    <span>Modificar Tasa Oficial BCV</span>
+                    <span class="neon-btn-indicator">Ajuste <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="btn-danger" style="margin-top:14px; width:100%; border-radius:var(--radius-sm);" onclick="PaseoMacutoUI.handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+
+            <!-- 2. PANEL EXCLUSIVO DEL COMERCIANTE (VENDEDOR) -->
+            <div class="sidebar-module-section" id="sidebar-panel-merchant" style="display:none;">
+                <span class="sidebar-section-title"><i class="fas fa-store" style="color:var(--neon-emerald);"></i> Panel del Vendedor</span>
+
+                <button class="neon-module-btn emerald neon-glow-emerald" onclick="PaseoMacutoUI.toggleSidebar(false); PaseoMacutoUI.openUserProfileAndHistory();">
+                    <i class="fas fa-id-card-alt" style="color:var(--neon-emerald);"></i>
+                    <span>Mi Perfil & Dashboard de Vendedor</span>
+                    <span class="neon-btn-indicator">KPIs & Log <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <!-- MÓDULO PAGOS POR VERIFICAR (3 SOLAPAS) -->
+                <button class="neon-module-btn emerald neon-glow-emerald" onclick="PaseoMacutoUI.toggleSidebar(false); CartAndPagoMovil.openMerchantVerificationPanel();">
+                    <i class="fas fa-money-check-alt" style="color:var(--neon-emerald);"></i>
+                    <span>Pagos por Verificar</span>
+                    <span class="neon-btn-indicator" style="color:#06D6A0; font-weight:800;">3 Solapas <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn cyan" onclick="PaseoMacutoUI.toggleSidebar(false); PaseoMacutoUI.openMerchantDashboard();">
+                    <i class="fas fa-plus-circle" style="color:var(--neon-cyan);"></i>
+                    <span>Carga de Productos</span>
+                    <span class="neon-btn-indicator">Editor <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn emerald" onclick="PaseoMacutoUI.openModuleView('visitor_products')">
+                    <i class="fas fa-tags" style="color:var(--neon-emerald);"></i>
+                    <span>Precios & Menú</span>
+                    <span class="neon-btn-indicator">USD & Bs. BCV <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn emerald" onclick="PaseoMacutoUI.openModuleView('merchant_finances')">
+                    <i class="fas fa-wallet" style="color:var(--neon-emerald);"></i>
+                    <span>Ganancias & Balance de Pagos</span>
+                    <span class="neon-btn-indicator">Liquidación <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn purple" onclick="PaseoMacutoUI.toggleSidebar(false); PaseoMacutoUI.openMerchantDashboard();">
+                    <i class="fas fa-warehouse" style="color:var(--neon-purple);"></i>
+                    <span>Almacén e Inventario</span>
+                    <span class="neon-btn-indicator">Stock <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn amber" onclick="PaseoMacutoUI.openModuleView('merchant_complaints_requests')">
+                    <i class="fas fa-inbox" style="color:var(--neon-amber);"></i>
+                    <span>Denuncias y Solicitudes</span>
+                    <span class="neon-btn-indicator">Atención <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="btn-danger" style="margin-top:14px; width:100%; border-radius:var(--radius-sm);" onclick="PaseoMacutoUI.handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+
+            <!-- 3. PANEL EXCLUSIVO DEL VISITANTE -->
+            <div class="sidebar-module-section" id="sidebar-panel-visitor" style="display:none;">
+                <span class="sidebar-section-title"><i class="fas fa-umbrella-beach" style="color:var(--caribbean-cyan);"></i> Panel del Visitante</span>
+
+                <button class="neon-module-btn cyan neon-glow-cyan" onclick="PaseoMacutoUI.toggleSidebar(false); PaseoMacutoUI.openUserProfileAndHistory();">
+                    <i class="fas fa-id-card-alt" style="color:var(--neon-cyan);"></i>
+                    <span>Mi Perfil, Dashboard & Historial</span>
+                    <span class="neon-btn-indicator">Compras & XP <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn cyan" onclick="PaseoMacutoUI.toggleSidebar(false); CartAndPagoMovil.openCartModal();">
+                    <i class="fas fa-shopping-cart" style="color:var(--neon-cyan);"></i>
+                    <span>Mi Carrito de Compras</span>
+                    <span class="neon-btn-indicator">Ver Pedido <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn emerald neon-glow-emerald" onclick="PaseoMacutoUI.openModuleView('visitor_purchases')">
+                    <i class="fas fa-receipt" style="color:var(--neon-emerald);"></i>
+                    <span>Mis Compras (Status de Pagos)</span>
+                    <span class="neon-btn-indicator">Verificadas / Por Verificar <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn cyan" onclick="PaseoMacutoUI.openModuleView('visitor_products')">
+                    <i class="fas fa-utensils" style="color:var(--neon-cyan);"></i>
+                    <span>Productos de los Comercios</span>
+                    <span class="neon-btn-indicator">Gastronomía <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn emerald" onclick="PaseoMacutoUI.openModuleView('visitor_services')">
+                    <i class="fas fa-umbrella-beach" style="color:var(--neon-emerald);"></i>
+                    <span>Servicios Playeros</span>
+                    <span class="neon-btn-indicator">Tours & Toldos <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn amber" onclick="PaseoMacutoUI.openModuleView('visitor_complaints')">
+                    <i class="fas fa-clipboard-check" style="color:var(--neon-amber);"></i>
+                    <span>Mis Quejas Realizadas (Status)</span>
+                    <span class="neon-btn-indicator">Seguimiento <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="btn-danger" style="margin-top:14px; width:100%; border-radius:var(--radius-sm);" onclick="PaseoMacutoUI.handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+
+            <!-- 4. PANEL PARA VISITANTES INVITADOS (NO AUTENTICADOS) -->
+            <div class="sidebar-module-section" id="sidebar-panel-guest" style="display:flex;">
+                <span class="sidebar-section-title"><i class="fas fa-compass" style="color:var(--caribbean-cyan);"></i> Acceso a Paseo Macuto</span>
+
+                <button class="neon-module-btn cyan neon-glow-cyan" onclick="PaseoMacutoUI.toggleSidebar(false); PaseoMacutoUI.openModal('modal-auth', 'login');">
+                    <i class="fas fa-sign-in-alt" style="color:var(--neon-cyan);"></i>
+                    <span>Iniciar Sesión</span>
+                    <span class="neon-btn-indicator">Entrar <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <button class="neon-module-btn emerald neon-glow-emerald" onclick="PaseoMacutoUI.toggleSidebar(false); PaseoMacutoUI.openModal('modal-auth', 'register');">
+                    <i class="fas fa-user-plus" style="color:var(--neon-emerald);"></i>
+                    <span>Crear Cuenta Nueva</span>
+                    <span class="neon-btn-indicator">Registro <i class="fas fa-chevron-right"></i></span>
+                </button>
+
+                <div style="background:var(--bg-primary); border-radius:var(--radius-sm); padding:14px; margin-top:10px; font-size:12px; color:var(--text-secondary); line-height:1.5; border-left:3px solid var(--neon-cyan);">
+                    <div style="font-weight:700; color:var(--caribbean-cyan); margin-bottom:4px;">
+                        <i class="fas fa-lock"></i> Modo Invitado
+                    </div>
+                    Para llenar el carrito y adquirir productos o servicios en el bulevar, debes <b>Iniciar Sesión</b> o <b>Crear tu Cuenta</b>.
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- -------------------------------------------------------------
+         CONTENEDOR PRINCIPAL: MAPA GIS HD Y HERRAMIENTAS
+         ------------------------------------------------------------- -->
+    <main class="app-container">
+        <!-- MAPA LEAFLET ACOTADO A PASEO MACUTO -->
+        <div id="map-view"></div>
+
+        <!-- BARRA FLOTANTE DE BÚSQUEDA Y CATEGORÍAS -->
+        <div class="map-floating-bar">
+            <div class="search-input-box">
+                <i class="fas fa-search" style="color:var(--caribbean-cyan);"></i>
+                <input type="text" id="map-search-input" placeholder="Buscar empanadas, toldos, paddle, posadas..." autocomplete="off">
+            </div>
+
+            <div class="category-scroll-chips">
+                <button class="category-chip active" data-cat="all">
+                    <i class="fas fa-compass"></i> Todos
+                </button>
+                <button class="category-chip" data-cat="Gastronomía">
+                    <i class="fas fa-utensils"></i> Gastronomía
+                </button>
+                <button class="category-chip" data-cat="Pescador">
+                    <i class="fas fa-fish"></i> Pescaderías / CONPPA
+                </button>
+                <button class="category-chip" data-cat="Toldos">
+                    <i class="fas fa-umbrella-beach"></i> Toldos y Balnearios
+                </button>
+                <button class="category-chip" data-cat="Paddle">
+                    <i class="fas fa-swimmer"></i> Deportes Acuáticos
+                </button>
+                <button class="category-chip" data-cat="Hospedaje">
+                    <i class="fas fa-hotel"></i> Hoteles y Posadas
+                </button>
+                <button class="category-chip" data-cat="Histórico">
+                    <i class="fas fa-monument"></i> Sitios Históricos
+                </button>
+            </div>
+        </div>
+
+        <!-- HERRAMIENTAS FLOTANTES DE NAVEGACIÓN Y CONTROL -->
+        <div class="map-floating-tools">
+            <!-- BOTÓN GPS MÓVIL (DETECTAR UBICACIÓN EXACTA) -->
+            <button class="tool-fab gps-btn" onclick="PaseoMacutoMap.locateUserGps()" title="Detectar mi ubicación actual exacta">
+                <i class="fas fa-crosshairs"></i>
+            </button>
+
+            <!-- CAMBIAR CAPAS (SATÉLITE HD / CARTOGRAFÍA PLAYERA) -->
+            <button class="tool-fab" onclick="PaseoMacutoMap.toggleLayer()" title="Cambiar Vista Satelital / Callejero">
+                <i class="fas fa-layer-group"></i>
+            </button>
+
+            <!-- COLAPSAR / EXPANDIR PANEL INFERIOR -->
+            <button class="tool-fab" onclick="PaseoMacutoUI.toggleBottomSheet()" title="Minimizar / Mostrar Lista de Locales">
+                <i class="fas fa-list"></i>
+            </button>
+        </div>
+
+        <!-- -------------------------------------------------------------
+             PANEL INFERIOR COLAPSABLE (BOTTOM-SHEET ERGONÓMICO MÓVIL)
+             ------------------------------------------------------------- -->
+        <div class="bottom-sheet-panel half" id="bottom-sheet">
+            <div class="sheet-handle-bar" onclick="PaseoMacutoUI.toggleBottomSheet()">
+                <div class="handle-pill"></div>
+            </div>
+            <div style="padding: 0 16px 8px; display:flex; justify-content:space-between; align-items:center;">
+                <div class="sheet-title">
+                    <i class="fas fa-store-alt" style="color:var(--caribbean-cyan);"></i>
+                    <span>Comercios de Paseo Macuto</span>
+                </div>
+                <button class="sheet-btn-toggle" onclick="PaseoMacutoUI.toggleBottomSheet()">
+                    <i class="fas fa-arrows-alt-v"></i> Ajustar
+                </button>
+            </div>
+            <div class="sheet-content-scroll" id="merchant-list-scroll">
+                <!-- Se inyectan dinámicamente los comercios -->
+            </div>
+        </div>
+    </main>
+
+    <!-- =============================================================
+         MODALES DE LA PLATAFORMA
+         ============================================================= -->
+
+    <!-- 1. MODAL: AUTENTICACIÓN Y REGISTRO (VISITANTE / COMERCIANTE CON RIF) -->
+    <div class="modal-overlay" id="modal-auth">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-circle" style="color:var(--caribbean-cyan);"></i> Cuenta Paseo Macuto</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-auth')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs Login / Registro -->
+                <div style="display:flex; border-bottom:1px solid var(--border-color); gap:12px; margin-bottom:12px;">
+                    <button class="sheet-btn-toggle" id="tab-login" style="font-size:14px; font-weight:700; color:var(--caribbean-cyan); border-bottom:2px solid var(--caribbean-cyan); padding-bottom:8px;" onclick="document.getElementById('form-login-box').style.display='flex'; document.getElementById('form-reg-box').style.display='none';">Iniciar Sesión</button>
+                    <button class="sheet-btn-toggle" id="tab-register" style="font-size:14px; font-weight:700; color:var(--text-secondary); padding-bottom:8px;" onclick="document.getElementById('form-login-box').style.display='none'; document.getElementById('form-reg-box').style.display='flex';">Crear Usuario</button>
+                </div>
+
+                <!-- Form Login -->
+                <form id="form-login-box" style="display:flex; flex-direction:column; gap:12px;" onsubmit="PaseoMacutoUI.handleLogin(event)">
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" id="login-email" class="form-control" required placeholder="ejemplo@paseomacuto.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="login-password" class="form-control" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top:8px;">
+                        <i class="fas fa-sign-in-alt"></i> Entrar a la Plataforma
+                    </button>
+                    <div style="font-size:11px; color:var(--text-muted); text-align:center; margin-top:6px;">
+                        <b>Cuentas Demo:</b><br>
+                        Superadmin: <code>lams210488@gmail.com</code> / <code>admin123</code><br>
+                        Comerciante: <code>gaviota@paseomacuto.com</code> / <code>comercio123</code><br>
+                        Visitante: <code>turista@paseomacuto.com</code> / <code>turista123</code>
+                    </div>
+                </form>
+
+                <!-- Form Registro con Soporte de RIF y Roles -->
+                <form id="form-reg-box" style="display:none; flex-direction:column; gap:12px;" onsubmit="PaseoMacutoUI.handleRegister(event)">
+                    <div class="form-group">
+                        <label>Tipo de Usuario / Rol</label>
+                        <select id="reg-role" class="form-control">
+                            <option value="visitor">Usuario Visitante (Consumidor / Turista)</option>
+                            <option value="merchant">Prestador de Servicios (Comerciante / Emprendedor)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" id="reg-name" class="form-control" required placeholder="Tu Nombre">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" id="reg-email" class="form-control" required placeholder="tu@correo.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Teléfono / WhatsApp</label>
+                        <input type="tel" id="reg-phone" class="form-control" placeholder="+58 412 1234567">
+                    </div>
+
+                    <!-- Campos Condicionales para Comerciantes -->
+                    <div id="merchant-extra-fields" style="display:none; flex-direction:column; gap:12px; background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-highlight);">
+                        <div style="font-size:12px; font-weight:800; color:var(--caribbean-cyan);">
+                            <i class="fas fa-id-card"></i> Datos del Comercio en Paseo Macuto
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre del Establecimiento / Puesto</label>
+                            <input type="text" id="reg-commercial-name" class="form-control" placeholder="Ej: Kiosko El Caribe">
+                        </div>
+                        <div class="form-group">
+                            <label>RIF Fiscal (Requerido para Verificación)</label>
+                            <input type="text" id="reg-rif" class="form-control" placeholder="Ej: J-12345678-0 o V-12345678-9">
+                        </div>
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <select id="reg-category" class="form-control">
+                                <option value="Gastronomía y Bebidas">Gastronomía y Bebidas</option>
+                                <option value="Pescadería y Marisquería">Pescadería y Marisquería</option>
+                                <option value="Toldos y Servicios Playeros">Toldos y Servicios Playeros</option>
+                                <option value="Deportes Acuáticos y Aventura">Deportes Acuáticos y Aventura</option>
+                                <option value="Artesanías y Recuerdos">Artesanías y Recuerdos</option>
+                                <option value="Hospedaje y Posada">Hospedaje y Posada</option>
+                            </select>
+                        </div>
+                        <div style="background:rgba(0,180,216,0.08); border:1px solid rgba(0,180,216,0.3); border-radius:var(--radius-sm); padding:10px 12px; font-size:11px; color:var(--text-secondary); line-height:1.4;">
+                            <i class="fas fa-info-circle" style="color:var(--neon-cyan);"></i> <b>Asignación de Ubicación GIS:</b> La ubicación geográfica oficial (Plus Code y coordenadas) de tu puesto será verificada y asignada directamente por el <b>Superadministrador de Paseo Macuto</b> tras auditar tu RIF.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="reg-password" class="form-control" required placeholder="Crea una contraseña segura">
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-check-circle"></i> Registrarme Ahora
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRO DE COMERCIANTE EN VERIFICACIÓN -->
+    <div class="modal-overlay" id="modal-merchant-registered-pending" style="z-index:99999;">
+        <div class="modal-box medium neon-border-amber" style="text-align:center; padding:24px; max-width:520px;">
+            <div style="width:70px; height:70px; border-radius:50%; background:rgba(245, 158, 11, 0.15); display:inline-flex; align-items:center; justify-content:center; margin-bottom:16px; border:2px solid #F59E0B; box-shadow:0 0 20px rgba(245, 158, 11, 0.4);">
+                <i class="fas fa-user-clock" style="font-size:32px; color:#F59E0B;"></i>
+            </div>
+            <h3 style="font-size:20px; font-weight:800; color:var(--text-primary); margin-bottom:8px;">
+                ¡Cuenta Registrada con Éxito!
+            </h3>
+            <div style="display:inline-block; padding:4px 14px; border-radius:20px; background:rgba(245, 158, 11, 0.15); border:1px solid #F59E0B; color:#F59E0B; font-weight:800; font-size:12px; margin-bottom:16px;">
+                <i class="fas fa-hourglass-half"></i> ESTATUS: EN PROCESO DE VERIFICACIÓN
+            </div>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.6; margin-bottom:18px;">
+                Tu solicitud de comerciante ha sido recibida por la administración de <b>Paseo Macuto</b>.
+                Para garantizar el orden urbanístico y la seguridad del bulevar costero, <b>únicamente el Superadministrador</b> tiene autorización para auditar tu RIF y asignar la ubicación geográfica oficial (Plus Code) de tu puesto en el sistema.
+            </p>
+            <div style="background:var(--bg-primary); border:1px dashed var(--border-color); border-radius:var(--radius-sm); padding:14px; font-size:12px; text-align:left; margin-bottom:20px; line-height:1.6;">
+                <div style="font-weight:700; color:var(--caribbean-cyan); margin-bottom:8px;">
+                    <i class="fas fa-info-circle"></i> Pasos para activación de tu negocio:
+                </div>
+                <div style="color:var(--text-secondary);">
+                    <div style="margin-bottom:4px;">1. El <b>Superusuario</b> auditará y validará tu RIF Fiscal.</div>
+                    <div style="margin-bottom:4px;">2. El <b>Superusuario</b> asignará tu <b>Plus Code oficial</b> y coordenadas GPS en el bulevar.</div>
+                    <div>3. <b>Inmediatamente</b> al ser cargada tu ubicación en el sistema, tu establecimiento aparecerá activo en el <b>Mapa GIS</b> y tus productos estarán disponibles para la venta a todos los visitantes.</div>
+                </div>
+            </div>
+            <button class="btn-primary" style="width:100%; padding:10px; font-weight:700;" onclick="PaseoMacutoUI.closeModal('modal-merchant-registered-pending')">
+                <i class="fas fa-check-circle"></i> Entendido y de Acuerdo
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. MODAL: DASHBOARD SUPERUSUARIO (KPIS, AUDITORÍA RIF, BCV Y POTENCIADORES) -->
+    <div class="modal-overlay" id="modal-admin-dashboard">
+        <div class="modal-box large">
+            <div class="modal-header">
+                <h3><i class="fas fa-crown" style="color:#F59E0B;"></i> Panel de Superusuario - Paseo Macuto</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-admin-dashboard')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Banner de Alertas Pendientes de RIF -->
+                <div class="admin-alert-banner" id="admin-pending-rif-alert" style="display:none;"></div>
+
+                <!-- Resumen de KPIs -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-title">Comercios Activos</span>
+                        <span class="kpi-value" id="kpi-merchants-count">--</span>
+                        <span class="kpi-sub" id="kpi-capacity-percent">Capacidad 180</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Visitantes</span>
+                        <span class="kpi-value" id="kpi-visitors-count">--</span>
+                        <span class="kpi-sub">Registrados</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Ventas Totales</span>
+                        <span class="kpi-value" id="kpi-sales-usd">--</span>
+                        <span class="kpi-sub" id="kpi-sales-bs">--</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Satisfacción</span>
+                        <span class="kpi-value" id="kpi-satisfaction">--</span>
+                        <span class="kpi-sub">Reputación Global</span>
+                    </div>
+                </div>
+
+                <!-- Tabs de Secciones del Superadmin -->
+                <div style="display:flex; border-bottom:1px solid var(--border-color); gap:12px; margin-top:8px;">
+                    <button class="sheet-btn-toggle" id="admin-tab-rif" style="font-size:13px; font-weight:700; color:var(--caribbean-cyan);" onclick="document.getElementById('sec-admin-rif').style.display='block'; document.getElementById('sec-admin-complaints').style.display='none'; document.getElementById('sec-admin-boosters').style.display='none';">
+                        <i class="fas fa-id-badge"></i> Auditoría de RIFs
+                    </button>
+                    <button class="sheet-btn-toggle" style="font-size:13px; font-weight:700; color:var(--text-secondary);" onclick="document.getElementById('sec-admin-rif').style.display='none'; document.getElementById('sec-admin-complaints').style.display='block'; document.getElementById('sec-admin-boosters').style.display='none';">
+                        <i class="fas fa-shield-alt"></i> Quejas y Denuncias
+                    </button>
+                    <button class="sheet-btn-toggle" style="font-size:13px; font-weight:700; color:var(--text-secondary);" onclick="document.getElementById('sec-admin-rif').style.display='none'; document.getElementById('sec-admin-complaints').style.display='none'; document.getElementById('sec-admin-boosters').style.display='block';">
+                        <i class="fas fa-bolt"></i> Potenciadores de XP
+                    </button>
+                </div>
+
+                <!-- Sección: Auditoría de RIF -->
+                <div id="sec-admin-rif" style="display:block;">
+                    <div style="font-size:13px; font-weight:700; margin-bottom:8px;">Comerciantes Pendientes de Verificación de RIF:</div>
+                    <div id="admin-verifications-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+
+                <!-- Sección: Quejas y Denuncias -->
+                <div id="sec-admin-complaints" style="display:none;">
+                    <div style="font-size:13px; font-weight:700; margin-bottom:8px;">Bandeja de Incidentes y Denuncias de Usuarios:</div>
+                    <div id="admin-complaints-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+
+                <!-- Sección: Potenciadores de XP -->
+                <div id="sec-admin-boosters" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:13px; font-weight:700;">Multiplicadores de Experiencia Activos:</span>
+                    </div>
+                    <div id="admin-boosters-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+
+                    <!-- Form Crear Nuevo Booster -->
+                    <form id="form-create-booster" style="background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; flex-direction:column; gap:8px;" onsubmit="PaseoMacutoUI.createBooster(event)">
+                        <span style="font-size:12px; font-weight:700; color:var(--caribbean-cyan);">+ Crear Nuevo Potenciador de Acción</span>
+                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                            <input type="text" id="boost-name" class="form-control" placeholder="Nombre (ej: Viernes Costero)" required>
+                            <input type="number" step="0.1" min="1.1" max="10.0" id="boost-multiplier" class="form-control" placeholder="Mult (ej: 2.0)" required>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:8px;">
+                            <select id="boost-action" class="form-control">
+                                <option value="purchase">Por Compras</option>
+                                <option value="review">Por Calificaciones</option>
+                                <option value="visit">Por Visitas Diarias</option>
+                                <option value="all">Todas las Acciones</option>
+                            </select>
+                            <input type="text" id="boost-desc" class="form-control" placeholder="Descripción para el usuario" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="padding:8px 14px; font-size:12px; align-self:flex-start;">
+                            <i class="fas fa-plus"></i> Activar Potenciador
+                        </button>
+                    </form>
+                </div>
+
+                <div style="border-top:1px solid var(--border-color); padding-top:12px; display:flex; justify-content:space-between;">
+                    <button class="btn-secondary" onclick="PaseoMacutoUI.openBcvModal()">
+                        <i class="fas fa-dollar-sign"></i> Modificar Tasa BCV
+                    </button>
+                    <button class="btn-danger" onclick="PaseoMacutoUI.handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MODAL: DASHBOARD DEL PRESTADOR DE SERVICIOS (COMERCIANTE) -->
+    <div class="modal-overlay" id="modal-merchant-dashboard">
+        <div class="modal-box large">
+            <div class="modal-header">
+                <h3><i class="fas fa-store" style="color:var(--caribbean-cyan);"></i> Mi Establecimiento en Paseo Macuto</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-merchant-dashboard')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Cabecera del Comercio con RIF -->
+                <div style="background:var(--bg-primary); padding:14px; border-radius:var(--radius-md); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h2 id="merch-dash-name" style="font-size:17px; font-weight:800;">Nombre del Local</h2>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">
+                            RIF: <b id="merch-dash-rif">--</b> • <span id="merch-dash-sector">--</span>
+                        </div>
+                    </div>
+                    <div id="merch-dash-rif-badge"></div>
+                </div>
+
+                <!-- Tarjeta de Doble Reputación -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px;">
+                    <div class="kpi-card" style="border-left: 3px solid #06D6A0;">
+                        <span class="kpi-title">Reputación Total</span>
+                        <span class="kpi-value" id="merch-rep-total" style="color:#06D6A0;">--</span>
+                        <span class="kpi-sub">Puntaje Global</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Reputación Ventas</span>
+                        <span class="kpi-value" id="merch-rep-sales">--</span>
+                        <span class="kpi-sub"><span id="merch-sales-count">0</span> órdenes</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Reputación Servicio</span>
+                        <span class="kpi-value" id="merch-rep-service">--</span>
+                        <span class="kpi-sub">Opiniones Reales</span>
+                    </div>
+                </div>
+
+                <!-- Módulo de Ubicación Oficial en Paseo Macuto (Asignada exclusivamente por Superusuario) -->
+                <div style="background:var(--bg-primary); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; flex-direction:column; gap:10px;">
+                    <div style="font-size:13px; font-weight:700; color:var(--caribbean-cyan); display:flex; align-items:center; justify-content:space-between;">
+                        <span><i class="fas fa-map-marker-alt"></i> Ubicación Oficial en Paseo Macuto</span>
+                        <span id="merch-dash-loc-status-badge" class="badge-verified" style="font-size:10px;"></span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+                        <div class="form-group">
+                            <label>Plus Code Oficial</label>
+                            <div id="merch-dash-plus-display" style="padding:8px 10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:monospace; font-weight:700; color:var(--neon-emerald); font-size:12px;">--</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Latitud GPS</label>
+                            <div id="merch-dash-lat-display" style="padding:8px 10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:monospace; color:var(--text-secondary); font-size:12px;">--</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Longitud GPS</label>
+                            <div id="merch-dash-lng-display" style="padding:8px 10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:monospace; color:var(--text-secondary); font-size:12px;">--</div>
+                        </div>
+                    </div>
+                    <div id="merch-dash-loc-notice" style="font-size:11px; color:var(--text-muted); line-height:1.4; background:rgba(0,180,216,0.06); padding:8px 10px; border-radius:var(--radius-sm); border-left:3px solid var(--caribbean-cyan);">
+                        <i class="fas fa-shield-alt"></i> <b>Nota de Asignación:</b> La ubicación geográfica y el Plus Code oficial en el mapa son administrados y cargados exclusivamente por el <b>Superusuario</b> para garantizar la correcta distribución y seguridad del Paseo Macuto.
+                    </div>
+                </div>
+
+                <!-- Menú y Catálogo de Productos / Servicios -->
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="font-size:14px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
+                        <span><i class="fas fa-list-alt"></i> Mi Catálogo / Menú</span>
+                    </div>
+
+                    <div id="merch-products-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+                    <!-- Agregar Producto -->
+                    <form id="form-add-product" onsubmit="PaseoMacutoUI.addMerchantProduct(event)" style="background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); display:flex; flex-direction:column; gap:8px;">
+                        <span style="font-size:12px; font-weight:700; color:var(--text-secondary);">+ Cargar Nuevo Producto o Servicio</span>
+                        <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:8px;">
+                            <input type="text" id="new-prod-name" class="form-control" placeholder="Nombre (ej: Tostón Mixto)" required>
+                            <input type="text" id="new-prod-cat" class="form-control" placeholder="Rubro (ej: Plato Fuerte)">
+                            <input type="number" step="0.25" min="0.5" id="new-prod-price" class="form-control" placeholder="Precio ($)" required>
+                        </div>
+                        <input type="text" id="new-prod-desc" class="form-control" placeholder="Descripción de ingredientes o detalles del servicio">
+                        <button type="submit" class="btn-primary" style="padding:8px 14px; font-size:12px; align-self:flex-start;">
+                            <i class="fas fa-plus"></i> Publicar en el Catálogo
+                        </button>
+                    </form>
+                </div>
+
+                <div style="border-top:1px solid var(--border-color); padding-top:12px; display:flex; justify-content:flex-end;">
+                    <button class="btn-danger" onclick="PaseoMacutoUI.handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. MODAL: PERFIL DEL VISITANTE Y GAMIFICACIÓN POR NIVELES -->
+    <div class="modal-overlay" id="modal-visitor-profile">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fas fa-award" style="color:var(--caribbean-cyan);"></i> Mi Perfil de Turista</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-visitor-profile')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;">
+                    <h2 id="visitor-profile-name" style="font-size:18px; font-weight:800;">Visitante</h2>
+                    <span id="visitor-profile-email" style="font-size:12px; color:var(--text-muted);">--</span>
+                </div>
+
+                <!-- Tarjeta Dinámica de 10 Niveles Exponenciales -->
+                <div id="visitor-level-card"></div>
+
+                <div style="background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); font-size:12px; color:var(--text-secondary); line-height:1.4;">
+                    <b style="color:var(--text-primary);"><i class="fas fa-info-circle"></i> ¿Cómo subir de nivel en Paseo Macuto?</b><br>
+                    • Ingresa a diario a la plataforma (+5 XP)<br>
+                    • Compra productos o servicios en los locales (+20 XP)<br>
+                    • Deja una opinión constructiva sobre tu experiencia (+15 XP)<br>
+                    • Aprovecha los potenciadores de fin de semana para duplicar o triplicar tus puntos.
+                </div>
+
+                <button class="btn-danger" onclick="PaseoMacutoUI.handleLogout()" style="margin-top:10px;">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MODAL: DETALLE DEL COMERCIO Y CATÁLOGO DE COMPRA -->
+    <div class="modal-overlay" id="modal-merchant-detail">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div>
+                    <h3 id="detail-merch-title" style="font-size:16px;">Comercio</h3>
+                    <div id="detail-merch-category" style="font-size:11px; color:var(--caribbean-cyan); font-weight:700;">--</div>
+                </div>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-merchant-detail')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-primary); padding:10px 14px; border-radius:var(--radius-sm); font-size:12px;">
+                    <div>
+                        RIF: <b id="detail-merch-rif">--</b>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span class="reputation-stars-pill"><i class="fas fa-star"></i> <span id="detail-merch-rep">5.0</span></span>
+                        <span style="color:var(--text-muted);">(<span id="detail-merch-sales">0</span> ventas)</span>
+                    </div>
+                </div>
+
+                <p id="detail-merch-desc" style="font-size:13px; color:var(--text-secondary);"></p>
+
+                <!-- Lista de Productos -->
+                <div style="font-size:13px; font-weight:700; margin-top:4px;">Menú y Servicios Disponibles:</div>
+                <div id="detail-products-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+                <!-- Opiniones -->
+                <div style="font-size:13px; font-weight:700; margin-top:8px;">Opiniones de Visitantes:</div>
+                <div id="detail-reviews-list" style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto;"></div>
+
+                <!-- Botón de Denuncia -->
+                <div style="margin-top:8px; border-top:1px solid var(--border-color); padding-top:10px; text-align:center;">
+                    <button type="button" id="btn-complaint-trigger" style="background:none; border:none; color:var(--coral-alert); font-size:11px; font-weight:700; cursor:pointer;">
+                        <i class="fas fa-flag"></i> Reportar mala atención, sobreprecio o irregularidad
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MODAL: CALIFICAR LOCAL -->
+    <div class="modal-overlay" id="modal-submit-review">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fas fa-star" style="color:#F59E0B;"></i> Calificar Establecimiento</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-submit-review')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h4 id="rev-merchant-title" style="font-size:15px; font-weight:800; color:var(--caribbean-cyan);">--</h4>
+                <form onsubmit="PaseoMacutoUI.submitReview(event)" style="display:flex; flex-direction:column; gap:12px;">
+                    <input type="hidden" id="rev-merchant-id">
+                    <div class="form-group">
+                        <label>Puntuación (1 a 5 Estrellas)</label>
+                        <select id="rev-rating" class="form-control">
+                            <option value="5">⭐⭐⭐⭐⭐ 5 Estrellas - ¡Excelente servicio!</option>
+                            <option value="4">⭐⭐⭐⭐ 4 Estrellas - Muy bueno</option>
+                            <option value="3">⭐⭐⭐ 3 Estrellas - Aceptable</option>
+                            <option value="2">⭐⭐ 2 Estrellas - Regular</option>
+                            <option value="1">⭐ 1 Estrella - Mal servicio</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Comentario u Opinión</label>
+                        <textarea id="rev-comment" class="form-control" rows="3" placeholder="Describe tu experiencia con los productos, precios y atención..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> Publicar Calificación (+15 XP)
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. MODAL: FORMULARIO DE DENUNCIAS / QUEJAS -->
+    <div class="modal-overlay" id="modal-submit-complaint">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fas fa-shield-alt" style="color:var(--coral-alert);"></i> Denuncia Formal</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-submit-complaint')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="font-size:12px; color:var(--text-secondary);">
+                    Esta denuncia será enviada confidencialmente a la bandeja de auditoría del Superadministrador de Paseo Macuto.
+                </div>
+                <h4 id="comp-merchant-title" style="font-size:14px; font-weight:800; color:var(--coral-alert);">--</h4>
+                <form id="form-submit-complaint" onsubmit="PaseoMacutoUI.submitComplaint(event)" style="display:flex; flex-direction:column; gap:12px;">
+                    <input type="hidden" id="comp-merchant-id">
+                    <div class="form-group">
+                        <label>Motivo y Detalles de la Denuncia</label>
+                        <textarea id="comp-desc" class="form-control" rows="4" placeholder="Explica detalladamente la situación (ej. sobreprecio no justificado, maltrato verbal, incumplimiento de lo acordado)..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn-danger" style="padding:10px; font-size:13px;">
+                        <i class="fas fa-exclamation-triangle"></i> Enviar Denuncia a Auditoría
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. MODAL: ACTUALIZAR MANUALMENTE TASA OFICIAL BCV (SUPERADMIN) -->
+    <div class="modal-overlay" id="modal-bcv-edit">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fas fa-dollar-sign" style="color:var(--caribbean-cyan);"></i> Actualizar Tasa Oficial BCV</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-bcv-edit')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="PaseoMacutoUI.saveBcvRate(event)" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="form-group">
+                        <label>Nueva Tasa Oficial en Bolívares por Dólar (Bs./USD)</label>
+                        <input type="number" step="0.01" min="1.0" id="bcv-input-rate" class="form-control" required style="font-size:18px; font-weight:800; color:var(--caribbean-cyan);">
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted);">
+                        Al actualizar este valor, se reflejará de inmediato en la tarjeta superior derecha de todos los usuarios y convertirá automáticamente los precios en los menús y catálogos.
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-sync-alt"></i> Actualizar Tasa Global
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. MODAL DINÁMICO DE MÓDULOS DE USUARIO CON LUZ NEÓN -->
+    <div class="modal-overlay" id="modal-module-view">
+        <div class="modal-box large neon-glow-cyan">
+            <div class="modal-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <h3 id="module-view-title" style="font-size:16px;">Módulo del Sistema</h3>
+                    <span id="module-view-badge" class="badge-verified neon-glow-cyan">Activo</span>
+                </div>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-module-view')">&times;</button>
+            </div>
+            <div class="modal-body" id="module-view-content">
+                <!-- Se inyecta la información dividida en tarjetas neón -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. MODAL: CARRITO DE COMPRAS DEL VISITANTE -->
+    <div class="modal-overlay" id="modal-cart">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:16px;"><i class="fas fa-shopping-cart" style="color:var(--neon-cyan);"></i> Mi Carrito de Compras</h3>
+                    <div id="cart-merchant-title" style="font-size:11px; color:var(--text-muted); font-weight:700;">--</div>
+                    <div id="cart-merchant-pluscode" style="font-size:11px; color:var(--neon-cyan); font-family:monospace; margin-top:2px;"></div>
+                </div>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-cart')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="cart-items-list" style="display:flex; flex-direction:column; gap:8px; max-height:40vh; overflow-y:auto;">
+                    <!-- Productos en el carrito -->
+                </div>
+
+                <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:13px; color:var(--text-muted); font-weight:700;">Subtotal Dólares:</span>
+                        <b id="cart-total-usd" style="font-size:16px; color:var(--text-primary);">$0.00</b>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:6px;">
+                        <span style="font-size:13px; font-weight:800; color:var(--caribbean-cyan);">Total en Bolívares (BCV):</span>
+                        <b id="cart-total-bs" style="font-size:18px; font-weight:900; color:#06D6A0;">0.00 Bs.</b>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-secondary" style="flex:1;" onclick="CartAndPagoMovil.clearCart()">
+                        <i class="fas fa-trash"></i> Vaciar
+                    </button>
+                    <button class="btn-primary neon-glow-cyan" id="btn-cart-checkout" style="flex:2;" onclick="CartAndPagoMovil.openPagoMovilCheckout()">
+                        <i class="fas fa-bolt"></i> Pagar con Pago Móvil
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 11. MODAL: FORMULARIO DE PAGO MÓVIL DEL VISITANTE -->
+    <div class="modal-overlay" id="modal-pagomovil-checkout">
+        <div class="modal-box large">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:16px;"><i class="fas fa-mobile-alt" style="color:var(--neon-cyan);"></i> Pago Móvil Venezuela</h3>
+                    <div style="font-size:11px; color:var(--text-muted);">Realiza la transferencia y adjunta tu comprobante</div>
+                </div>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-pagomovil-checkout')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- DATOS DEL VENDEDOR PARA PAGO MÓVIL -->
+                <div class="pagomovil-vendor-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:11px; font-weight:800; text-transform:uppercase; color:var(--neon-cyan);">
+                            <i class="fas fa-qrcode"></i> Datos del Vendedor Receptor
+                        </span>
+                        <b id="pm-total-bs-display" style="font-size:18px; font-weight:900; color:#06D6A0;">0.00 Bs.</b>
+                    </div>
+                    <div class="pagomovil-data-grid">
+                        <div class="pagomovil-item">
+                            <span>Beneficiario / Negocio:</span>
+                            <b id="pm-vendor-name">--</b>
+                        </div>
+                        <div class="pagomovil-item">
+                            <span>Banco Destino:</span>
+                            <b id="pm-vendor-bank">--</b>
+                        </div>
+                        <div class="pagomovil-item">
+                            <span>Teléfono:</span>
+                            <b id="pm-vendor-phone">--</b>
+                        </div>
+                        <div class="pagomovil-item">
+                            <span>Cédula / RIF:</span>
+                            <b id="pm-vendor-ci">--</b>
+                        </div>
+                        <div class="pagomovil-item" style="grid-column: span 2;">
+                            <span><i class="fas fa-map-pin"></i> Ubicación Plus Code Receptor:</span>
+                            <b id="pm-vendor-pluscode" style="color:var(--neon-cyan); font-family:monospace; font-size:13px; letter-spacing:0.5px;">--</b>
+                        </div>
+                    </div>
+                    <div id="pm-total-usd-display" style="font-size:11px; color:var(--text-secondary); margin-top:2px;"></div>
+                </div>
+
+                <!-- FORMULARIO DEL VISITANTE -->
+                <form id="form-pagomovil-submit" onsubmit="CartAndPagoMovil.submitPagoMovil(event)" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="form-group">
+                        <label><i class="fas fa-university"></i> Nombre del Banco Emisor (Desde dónde pagaste)</label>
+                        <select id="pay-sender-bank" class="form-control" required></select>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> Número Telefónico del Emisor</label>
+                            <input type="tel" id="pay-sender-phone" class="form-control" placeholder="0412-1234567" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-id-card"></i> Cédula / RIF del Pagador</label>
+                            <input type="text" id="pay-sender-ci" class="form-control" placeholder="V-12345678" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-receipt"></i> Número de Referencia (Últimos dígitos o comprobante)</label>
+                        <input type="text" id="pay-reference" class="form-control" placeholder="Ej: 123456" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-camera"></i> Foto o Comprobante de Pago (Captura de pantalla)</label>
+                        <input type="file" id="pay-proof-file" class="form-control" accept="image/*" onchange="CartAndPagoMovil.handleProofImageChange(event)">
+                        <div id="proof-preview-container" style="display:none; text-align:center;">
+                            <img id="proof-preview-img" class="proof-thumbnail-preview" alt="Vista previa del comprobante">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btn-submit-pagomovil" class="btn-primary neon-glow-cyan" style="padding:12px; font-size:14px; margin-top:6px;">
+                        <i class="fas fa-paper-plane"></i> Enviar Pago para Verificación
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 12. MENSAJE EMERGENTE: PAGO EN PROCESO DE VERIFICACIÓN (VISITANTE) -->
+    <div class="modal-overlay" id="modal-payment-pending-notice">
+        <div class="modal-box" style="max-width:440px; text-align:center;">
+            <div class="modal-body" style="padding:28px 20px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+                <div style="width:64px; height:64px; border-radius:50%; background:rgba(0, 180, 216, 0.15); border:2px solid var(--neon-cyan); display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(0,240,255,0.4);">
+                    <i class="fas fa-clock fa-spin" style="font-size:28px; color:var(--caribbean-cyan);"></i>
+                </div>
+                <h3 style="font-size:18px; font-weight:800; color:var(--text-primary);">¡Tu pago está siendo verificado!</h3>
+                <p style="font-size:13px; color:var(--text-secondary); line-height:1.4;">
+                    Hemos enviado los datos de tu Pago Móvil al comerciante de Paseo Macuto con la orden <b id="verified-pending-order-id" style="color:var(--caribbean-cyan);">#--</b>.<br><br>
+                    En unos instantes el vendedor validará los fondos en su módulo de pagos y tu compra quedará confirmada automáticamente.
+                </p>
+                <button class="btn-primary neon-glow-cyan" style="width:100%; margin-top:6px;" onclick="PaseoMacutoUI.closeModal('modal-payment-pending-notice')">
+                    Entendido, Seguir Explorando
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 13. MÓDULO DEL VENDEDOR: PAGOS POR VERIFICAR (3 SOLAPAS) -->
+    <div class="modal-overlay" id="modal-merchant-payments">
+        <div class="modal-box large">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:16px;"><i class="fas fa-cash-register" style="color:var(--neon-emerald);"></i> Pagos por Verificar (Módulo del Vendedor)</h3>
+                    <div style="font-size:11px; color:var(--text-muted);">Valida en orden cronológico los comprobantes de Pago Móvil de tus clientes</div>
+                </div>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-merchant-payments')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 3 SOLAPAS SENCILLAS -->
+                <div class="payment-tabs-bar">
+                    <button class="payment-tab-btn active" data-tab="pending" onclick="CartAndPagoMovil.switchMerchantPaymentTab('pending')">
+                        <i class="fas fa-hourglass-half"></i> Pendientes (<span id="badge-count-pending">0</span>)
+                    </button>
+                    <button class="payment-tab-btn" data-tab="approved" onclick="CartAndPagoMovil.switchMerchantPaymentTab('approved')">
+                        <i class="fas fa-check-circle"></i> Aprobados (<span id="badge-count-approved">0</span>)
+                    </button>
+                    <button class="payment-tab-btn" data-tab="denied" onclick="CartAndPagoMovil.switchMerchantPaymentTab('denied')">
+                        <i class="fas fa-times-circle"></i> Denegados (<span id="badge-count-denied">0</span>)
+                    </button>
+                </div>
+
+                <!-- LISTADO CRONOLÓGICO DE SOLICITUDES -->
+                <div id="merchant-payments-list" style="display:flex; flex-direction:column; gap:10px; max-height:60vh; overflow-y:auto;">
+                    <!-- Se inyectan las solicitudes -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 14. MENSAJE EMERGENTE: PAGO APROBADO CON ÉXITO (VISITANTE) -->
+    <div class="modal-overlay" id="modal-payment-approved-popup">
+        <div class="modal-box" style="max-width:440px; text-align:center;">
+            <div class="modal-body" style="padding:28px 20px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+                <div style="width:64px; height:64px; border-radius:50%; background:rgba(6, 214, 160, 0.15); border:2px solid var(--neon-emerald); display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(6, 214, 160, 0.5);">
+                    <i class="fas fa-check" style="font-size:28px; color:#06D6A0;"></i>
+                </div>
+                <h3 style="font-size:18px; font-weight:800; color:var(--text-primary);">¡Pago Verificado Correctamente!</h3>
+                <p style="font-size:13px; color:var(--text-secondary); line-height:1.4;">
+                    El comercio <b id="verified-success-merchant" style="color:var(--caribbean-cyan);">--</b> ha validado tu pago de <b id="verified-success-amount" style="color:#06D6A0;">--</b>.<br><br>
+                    Tu compra ya aparece registrada en tus compras realizadas y <b>se han sumado +25 XP</b> a tu nivel de visitante.
+                </p>
+                <button class="btn-primary neon-glow-emerald" style="width:100%; background:linear-gradient(135deg, #06D6A0, #059669); margin-top:6px;" onclick="PaseoMacutoUI.closeModal('modal-payment-approved-popup'); PaseoMacutoUI.openUserProfileAndHistory();">
+                    ¡Excelente! Ver Mis Compras y Perfil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 15. MODAL: MI PERFIL, DASHBOARD DE KPIS Y LOG HISTÓRICO DE INTERACCIONES -->
+    <div class="modal-overlay" id="modal-user-profile-history">
+        <div class="modal-box large" style="max-width:760px; max-height:88vh; display:flex; flex-direction:column;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size:16px;" id="profile-history-modal-title">
+                        <i class="fas fa-id-card-alt" style="color:var(--neon-cyan);"></i> Mi Perfil & Historial de Interacciones
+                    </h3>
+                    <div style="font-size:11px; color:var(--text-muted);" id="profile-history-modal-sub">
+                        Dashboard de rendimiento y bitácora cronológica completa
+                    </div>
+                </div>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-user-profile-history')">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y:auto; padding:16px;">
+                <!-- Tarjeta de Identidad y Rol -->
+                <div class="profile-header-card" id="profile-card-header-view">
+                    <div class="profile-avatar-circle" id="profile-avatar-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:6px;">
+                            <div>
+                                <h3 id="prof-user-name" style="font-size:17px; font-weight:900; margin:0; color:var(--text-primary);">--</h3>
+                                <div id="prof-user-email" style="font-size:12px; color:var(--text-muted);">--</div>
+                            </div>
+                            <span class="badge-verified neon-glow-cyan" id="prof-user-role-badge">Visitante</span>
+                        </div>
+                        <div style="font-size:11px; color:var(--caribbean-cyan); margin-top:4px; font-weight:600;" id="prof-member-since">
+                            <i class="fas fa-calendar-alt"></i> Miembro desde: --
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Gamificación (Nivel y XP) -->
+                <div id="prof-gamification-section" style="margin-bottom:14px;"></div>
+
+                <!-- Dashboard de KPIs según el Rol -->
+                <div style="margin-top:10px;">
+                    <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--neon-cyan); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-tachometer-alt"></i> <span id="prof-kpis-title">Métricas de Rendimiento</span>
+                    </div>
+                    <div class="profile-kpis-grid" id="prof-kpis-grid-container">
+                        <!-- Se inyectan KPIs del rol -->
+                    </div>
+                </div>
+
+                <!-- Expediente Detallado de Datos Cargados (Comercio, RIF, Plus Code, Pago Móvil, Menú) -->
+                <div id="prof-extra-details-container" style="margin-top:14px;">
+                    <!-- Se inyecta detalle comercial o de compras -->
+                </div>
+
+                <!-- Bitácora Histórica de Interacciones -->
+                <div style="margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--caribbean-cyan); display:flex; align-items:center; gap:6px;">
+                            <i class="fas fa-history"></i> Bitácora Histórica de Interacciones
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted); font-weight:700;" id="prof-history-count-badge">0 eventos</span>
+                    </div>
+                    
+                    <div class="history-timeline" id="prof-history-timeline-list">
+                        <!-- Se inyecta la línea de tiempo cronológica -->
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div style="border-top:1px solid var(--border-color); padding-top:14px; margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
+                    <button class="btn-danger" id="prof-btn-logout" style="padding:8px 14px; font-size:12px;" onclick="PaseoMacutoUI.closeModal('modal-user-profile-history'); PaseoMacutoUI.handleLogout();">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </button>
+                    <button class="btn-primary" style="padding:8px 16px; font-size:12px;" onclick="PaseoMacutoUI.closeModal('modal-user-profile-history')">
+                        <i class="fas fa-check"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIE DE PÁGINA (FOOTER) PROFESIONAL CON CRÉDITOS Y REDES SOCIALES -->
+    <footer class="app-footer-bar">
+        <div class="footer-credits">
+            <span>Creador: <b>Leonardo Morales</b>, creador de <b>Cluster LG</b></span>
+        </div>
+        <div class="footer-social-links">
+            <span style="font-size:11px; font-weight:600; color:var(--text-muted);">Síguenos en redes sociales:</span>
+            <a href="https://instagram.com" target="_blank" class="social-neon-icon" title="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/584120000000" target="_blank" class="social-neon-icon" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+            <a href="https://x.com" target="_blank" class="social-neon-icon" title="X (Twitter)"><i class="fab fa-x-twitter"></i></a>
+            <a href="https://t.me" target="_blank" class="social-neon-icon" title="Telegram"><i class="fab fa-telegram-plane"></i></a>
+        </div>
+    </footer>
+
+    <!-- Leaflet JS 1.9.4 -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Scripts de la Aplicación -->
+    <script src="assets/js/gamification.js"></script>
+    <script src="assets/js/cart_pagomovil.js"></script>
+    <script src="assets/js/map.js"></script>
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
