@@ -22,13 +22,40 @@ app = Flask(
 app.config['SECRET_KEY'] = 'paseo_macuto_caribe_secret_key_2026'
 
 # -------------------------------------------------------------
-# GESTIÓN DE BASE DE DATOS SQLITE / MYSQL
+# GESTIÓN DE BASE DE DATOS SUPABASE (POSTGRESQL) / SQLITE
 # -------------------------------------------------------------
 def get_db():
-    """Obtiene o reutiliza la conexión a la base de datos para la petición actual."""
+    """Obtiene o reutiliza la conexión a la base de datos (Supabase Cloud PostgreSQL o SQLite local)."""
     if 'db' not in g:
+        # 1. Intentar conectar a Supabase Cloud PostgreSQL
+        try:
+            import psycopg2
+            import psycopg2.extras
+            sb_host = os.environ.get('SUPABASE_DB_HOST', 'aws-0-us-west-2.pooler.supabase.com')
+            sb_port = int(os.environ.get('SUPABASE_DB_PORT', 6543))
+            sb_name = os.environ.get('SUPABASE_DB_NAME', 'postgres')
+            sb_user = os.environ.get('SUPABASE_DB_USER', 'postgres.rmolbppwwiqdmpbzclnk')
+            sb_pass = os.environ.get('SUPABASE_DB_PASSWORD', 'Bazzinga123.')
+            conn = psycopg2.connect(
+                host=sb_host,
+                port=sb_port,
+                dbname=sb_name,
+                user=sb_user,
+                password=sb_pass,
+                sslmode='require',
+                connect_timeout=3,
+                cursor_factory=psycopg2.extras.RealDictCursor
+            )
+            g.db = conn
+            g.db_driver = 'supabase'
+            return g.db
+        except Exception as err:
+            pass
+
+        # 2. Fallback a SQLite local
         g.db = sqlite3.connect(SQLITE_DB_PATH)
         g.db.row_factory = sqlite3.Row
+        g.db_driver = 'sqlite'
     return g.db
 
 @app.teardown_appcontext
@@ -37,6 +64,7 @@ def close_db(error):
     db = g.pop('db', None)
     if db is not None:
         db.close()
+
 
 # -------------------------------------------------------------
 # CONTEXT PROCESSORS (DATOS GLOBALES PARA JINJA2)
