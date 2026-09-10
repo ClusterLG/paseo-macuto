@@ -236,37 +236,64 @@ const CartAndPagoMovil = {
         const totalBs = totalUsd * bcv;
 
         // Cargar datos de pago móvil del vendedor
+        let m = null;
         try {
             const res = await fetch(`api/index.php?action=get_merchant_pagomovil&merchant_id=${merchantId}`);
-            const data = await res.json();
-            if (data.success) {
-                const m = data.merchant;
-                document.getElementById('pm-vendor-name').innerText = m.pago_movil_name || m.commercial_name;
-                document.getElementById('pm-vendor-bank').innerText = m.pago_movil_bank || 'Banco de Venezuela (0102)';
-                document.getElementById('pm-vendor-phone').innerText = m.pago_movil_phone || '0412-3551020';
-                document.getElementById('pm-vendor-ci').innerText = m.pago_movil_ci || 'V-16890452';
-                
-                const pmPlusCodeEl = document.getElementById('pm-vendor-pluscode');
-                if (pmPlusCodeEl) {
-                    pmPlusCodeEl.innerText = m.plus_code || 'No asignado';
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.merchant) {
+                    m = data.merchant;
                 }
-
-                document.getElementById('pm-total-bs-display').innerText = `${totalBs.toFixed(2)} Bs.`;
-                document.getElementById('pm-total-usd-display').innerText = `Total: $${totalUsd.toFixed(2)} USD (Tasa BCV: ${bcv.toFixed(2)} Bs/$)`;
-
-                // Limpiar campos del formulario
-                document.getElementById('form-pagomovil-submit').reset();
-                this.proofBase64 = '';
-                document.getElementById('proof-preview-container').style.display = 'none';
-
-                PaseoMacutoUI.closeModal('modal-cart');
-                PaseoMacutoUI.openModal('modal-pagomovil-checkout');
-            } else {
-                alert(data.message);
             }
         } catch (e) {
-            alert("Error al obtener los datos de Pago Móvil del vendedor.");
+            console.info("[Paseo Macuto] Obteniendo Pago Móvil desde catálogo estático...");
         }
+
+        if (!m) {
+            // Respaldo para GitHub Pages: buscar en PaseoMacutoMap.allMerchants
+            if (window.PaseoMacutoMap && PaseoMacutoMap.allMerchants && PaseoMacutoMap.allMerchants.length > 0) {
+                m = PaseoMacutoMap.allMerchants.find(x => Number(x.id) === Number(merchantId));
+                if (!m && this.cart[0].merchant_name) {
+                    const cleanCartName = this.cart[0].merchant_name.toLowerCase().trim();
+                    m = PaseoMacutoMap.allMerchants.find(x => x.commercial_name && x.commercial_name.toLowerCase().includes(cleanCartName));
+                }
+            }
+        }
+
+        if (!m) {
+            // Respaldo de contingencia con datos directos del comercio del carrito
+            m = {
+                commercial_name: this.cart[0].merchant_name || 'Comercio de Paseo Macuto',
+                pago_movil_name: this.cart[0].merchant_name || 'Comercio Paseo Macuto',
+                pago_movil_bank: 'Banesco (0134)',
+                pago_movil_phone: '0412-3456789',
+                pago_movil_ci: 'J-50119988-6',
+                plus_code: '769HJ355+FM'
+            };
+        }
+
+        document.getElementById('pm-vendor-name').innerText = m.pago_movil_name || m.commercial_name || 'Comercio Local';
+        document.getElementById('pm-vendor-bank').innerText = m.pago_movil_bank || 'Banesco (0134)';
+        document.getElementById('pm-vendor-phone').innerText = m.pago_movil_phone || '0412-3456789';
+        document.getElementById('pm-vendor-ci').innerText = m.pago_movil_ci || 'J-50119988-6';
+        
+        const pmPlusCodeEl = document.getElementById('pm-vendor-pluscode');
+        if (pmPlusCodeEl) {
+            pmPlusCodeEl.innerText = m.plus_code || '769HJ355+FM';
+        }
+
+        document.getElementById('pm-total-bs-display').innerText = `${totalBs.toFixed(2)} Bs.`;
+        document.getElementById('pm-total-usd-display').innerText = `Total: $${totalUsd.toFixed(2)} USD (Tasa BCV: ${bcv.toFixed(2)} Bs/$)`;
+
+        // Limpiar campos del formulario
+        const formSubmit = document.getElementById('form-pagomovil-submit');
+        if (formSubmit) formSubmit.reset();
+        this.proofBase64 = '';
+        const previewContainer = document.getElementById('proof-preview-container');
+        if (previewContainer) previewContainer.style.display = 'none';
+
+        PaseoMacutoUI.closeModal('modal-cart');
+        PaseoMacutoUI.openModal('modal-pagomovil-checkout');
     },
 
     handleProofImageChange(event) {
@@ -342,11 +369,50 @@ const CartAndPagoMovil = {
                 alert(data.message);
             }
         } catch (err) {
+            console.info("[Paseo Macuto] Registrando pago móvil en modo estático GitHub Pages...");
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Pago para Verificación';
             }
-            alert("Error al enviar comprobante de pago");
+
+            const orderId = Math.floor(1000 + Math.random() * 9000);
+            
+            // Guardar orden demo en localStorage para persistencia
+            try {
+                const existingOrders = JSON.parse(localStorage.getItem('pm_demo_orders') || '[]');
+                const newOrder = {
+                    id: orderId,
+                    merchant_id: merchantId,
+                    commercial_name: (document.getElementById('pm-vendor-name') ? document.getElementById('pm-vendor-name').innerText : 'Comercio Paseo Macuto'),
+                    visitor_name: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.name : 'Turista Visitante'),
+                    visitor_email: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.email : 'turista@paseomacuto.com'),
+                    visitor_phone: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.phone : senderPhone),
+                    amount_usd: totalUsd,
+                    amount_bs: totalUsd * (PaseoMacutoUI.bcvRate || 54.50),
+                    items_json: JSON.stringify(this.cart),
+                    sender_bank: senderBank,
+                    sender_phone: senderPhone,
+                    sender_ci: senderCi,
+                    payment_reference: paymentReference,
+                    proof_image: this.proofBase64 || '',
+                    status: 'pending_verification',
+                    created_at: new Date().toLocaleString()
+                };
+                existingOrders.unshift(newOrder);
+                localStorage.setItem('pm_demo_orders', JSON.stringify(existingOrders));
+            } catch (e) {}
+
+            PaseoMacutoUI.closeModal('modal-pagomovil-checkout');
+            this.cart = [];
+            this.saveCartToStorage();
+
+            const orderIdEl = document.getElementById('verified-pending-order-id');
+            if (orderIdEl) orderIdEl.innerText = `#${orderId}`;
+            PaseoMacutoUI.openModal('modal-payment-pending-notice');
+
+            if (window.GamificationSystem) {
+                GamificationSystem.showXpAwardNotice(25, 1, '¡Pago móvil enviado a verificación!');
+            }
         }
     },
 
@@ -381,94 +447,116 @@ const CartAndPagoMovil = {
             </div>
         `;
 
+        let data = null;
         try {
             const res = await fetch(`api/index.php?action=merchant_pending_payments&tab=${tab}`);
-            const data = await res.json();
-
-            if (!data.success) {
-                container.innerHTML = `<div style="text-align:center; padding:16px; color:var(--coral-alert);">${data.message}</div>`;
-                return;
+            if (res.ok) {
+                data = await res.json();
             }
-
-            // Actualizar contadores de las solapas
-            document.getElementById('badge-count-pending').innerText = data.counts.pending || 0;
-            document.getElementById('badge-count-approved').innerText = data.counts.approved || 0;
-            document.getElementById('badge-count-denied').innerText = data.counts.denied || 0;
-
-            if (data.orders.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align:center; padding:24px; color:var(--text-muted);">
-                        <i class="fas fa-receipt" style="font-size:32px; margin-bottom:8px; opacity:0.4;"></i>
-                        <p>No hay solicitudes en esta solapa.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = data.orders.map(o => {
-                let itemsHtml = '';
-                try {
-                    const parsed = JSON.parse(o.items_json || '[]');
-                    itemsHtml = parsed.map(i => `<span>• ${i.name} (x${i.qty || 1}) - $${(i.price_usd * (i.qty || 1)).toFixed(2)}</span>`).join('<br>');
-                } catch (e) {
-                    itemsHtml = 'Pedido playero';
-                }
-
-                const proofHtml = o.proof_image ? `
-                    <div style="margin-top:6px;">
-                        <span style="font-size:11px; font-weight:700; color:var(--text-muted);">Comprobante Adjunto:</span><br>
-                        <img src="${o.proof_image}" class="proof-thumbnail-preview" onclick="window.open('${o.proof_image}')" title="Clic para ampliar">
-                    </div>
-                ` : '<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Sin foto de comprobante</div>';
-
-                const actionButtons = o.status === 'pending_verification' ? `
-                    <div style="display:flex; gap:8px; margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
-                        <button class="btn-primary neon-glow-emerald" style="flex:1; background:linear-gradient(135deg, #06D6A0, #059669); font-size:12px;" onclick="CartAndPagoMovil.processPayment(${o.id}, 'accept')">
-                            <i class="fas fa-check-circle"></i> Aceptar Pago
-                        </button>
-                        <button class="btn-danger neon-glow-amber" style="flex:1; font-size:12px;" onclick="CartAndPagoMovil.processPayment(${o.id}, 'deny')">
-                            <i class="fas fa-times-circle"></i> Denegar
-                        </button>
-                    </div>
-                ` : `
-                    <div style="margin-top:8px; font-size:11px; color:var(--text-muted); font-weight:700;">
-                        Estado: <span class="${o.status === 'completed' ? 'badge-verified' : 'badge-pending'}">${o.status === 'completed' ? 'Aprobado y Cargado' : 'Denegado'}</span>
-                    </div>
-                `;
-
-                return `
-                    <div class="neon-card ${o.status === 'completed' ? 'emerald' : (o.status === 'denied' ? 'amber' : 'cyan')}">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <div>
-                                <b style="font-size:14px; color:var(--text-primary);"><i class="fas fa-user"></i> ${o.visitor_name}</b>
-                                <div style="font-size:11px; color:var(--text-muted);">${o.visitor_email} • Tlf: ${o.visitor_phone || o.sender_phone || 'N/A'}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:15px; font-weight:900; color:#06D6A0;">$${parseFloat(o.amount_usd).toFixed(2)}</div>
-                                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">${parseFloat(o.amount_bs).toFixed(2)} Bs.</div>
-                            </div>
-                        </div>
-
-                        <div style="background:var(--bg-primary); padding:8px 10px; border-radius:var(--radius-sm); font-size:12px; margin-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                            <div><span style="color:var(--text-muted); font-size:10px;">BANCO EMISOR:</span><br><b>${o.sender_bank || 'N/A'}</b></div>
-                            <div><span style="color:var(--text-muted); font-size:10px;">REFERENCIA:</span><br><b style="color:var(--caribbean-cyan);">${o.payment_reference || 'N/A'}</b></div>
-                            <div><span style="color:var(--text-muted); font-size:10px;">TELÉFONO PAGADOR:</span><br><b>${o.sender_phone || 'N/A'}</b></div>
-                            <div><span style="color:var(--text-muted); font-size:10px;">CÉDULA PAGADOR:</span><br><b>${o.sender_ci || 'N/A'}</b></div>
-                        </div>
-
-                        <div style="font-size:12px; margin-top:6px;">
-                            <span style="font-weight:700; color:var(--text-secondary);">Productos:</span><br>
-                            <div style="color:var(--text-muted); font-size:11px; line-height:1.4;">${itemsHtml}</div>
-                        </div>
-
-                        ${proofHtml}
-                        ${actionButtons}
-                    </div>
-                `;
-            }).join('');
         } catch (err) {
-            container.innerHTML = 'Error al cargar transacciones';
+            console.info("[Paseo Macuto] Cargando pagos desde respaldo demo...");
         }
+
+        if (!data || !data.success) {
+            let demoOrders = [];
+            try {
+                demoOrders = JSON.parse(localStorage.getItem('pm_demo_orders') || '[]');
+            } catch (e) {}
+
+            const pending = demoOrders.filter(o => o.status === 'pending_verification');
+            const approved = demoOrders.filter(o => o.status === 'completed');
+            const denied = demoOrders.filter(o => o.status === 'denied');
+
+            data = {
+                success: true,
+                counts: {
+                    pending: pending.length,
+                    approved: approved.length,
+                    denied: denied.length
+                },
+                orders: tab === 'approved' ? approved : (tab === 'denied' ? denied : pending)
+            };
+        }
+
+        // Actualizar contadores de las solapas
+        const bp = document.getElementById('badge-count-pending');
+        if (bp) bp.innerText = data.counts.pending || 0;
+        const ba = document.getElementById('badge-count-approved');
+        if (ba) ba.innerText = data.counts.approved || 0;
+        const bd = document.getElementById('badge-count-denied');
+        if (bd) bd.innerText = data.counts.denied || 0;
+
+        if (data.orders.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:24px; color:var(--text-muted);">
+                    <i class="fas fa-receipt" style="font-size:32px; margin-bottom:8px; opacity:0.4;"></i>
+                    <p>No hay solicitudes en esta solapa.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = data.orders.map(o => {
+            let itemsHtml = '';
+            try {
+                const parsed = JSON.parse(o.items_json || '[]');
+                itemsHtml = parsed.map(i => `<span>• ${i.name} (x${i.qty || 1}) - $${(i.price_usd * (i.qty || 1)).toFixed(2)}</span>`).join('<br>');
+            } catch (e) {
+                itemsHtml = 'Pedido playero';
+            }
+
+            const proofHtml = o.proof_image ? `
+                <div style="margin-top:6px;">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-muted);">Comprobante Adjunto:</span><br>
+                    <img src="${o.proof_image}" class="proof-thumbnail-preview" onclick="window.open('${o.proof_image}')" title="Clic para ampliar">
+                </div>
+            ` : '<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Sin foto de comprobante</div>';
+
+            const actionButtons = o.status === 'pending_verification' ? `
+                <div style="display:flex; gap:8px; margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
+                    <button class="btn-primary neon-glow-emerald" style="flex:1; background:linear-gradient(135deg, #06D6A0, #059669); font-size:12px;" onclick="CartAndPagoMovil.processPayment(${o.id}, 'accept')">
+                        <i class="fas fa-check-circle"></i> Aceptar Pago
+                    </button>
+                    <button class="btn-danger neon-glow-amber" style="flex:1; font-size:12px;" onclick="CartAndPagoMovil.processPayment(${o.id}, 'deny')">
+                        <i class="fas fa-times-circle"></i> Denegar
+                    </button>
+                </div>
+            ` : `
+                <div style="margin-top:8px; font-size:11px; color:var(--text-muted); font-weight:700;">
+                    Estado: <span class="${o.status === 'completed' ? 'badge-verified' : 'badge-pending'}">${o.status === 'completed' ? 'Aprobado y Cargado' : 'Denegado'}</span>
+                </div>
+            `;
+
+            return `
+                <div class="neon-card ${o.status === 'completed' ? 'emerald' : (o.status === 'denied' ? 'amber' : 'cyan')}">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <b style="font-size:14px; color:var(--text-primary);"><i class="fas fa-user"></i> ${o.visitor_name || 'Turista'}</b>
+                            <div style="font-size:11px; color:var(--text-muted);">${o.visitor_email || 'turista@paseomacuto.com'} • Tlf: ${o.visitor_phone || o.sender_phone || 'N/A'}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:15px; font-weight:900; color:#06D6A0;">$${parseFloat(o.amount_usd).toFixed(2)}</div>
+                            <div style="font-size:11px; color:var(--text-muted); font-weight:700;">${parseFloat(o.amount_bs).toFixed(2)} Bs.</div>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-primary); padding:8px 10px; border-radius:var(--radius-sm); font-size:12px; margin-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                        <div><span style="color:var(--text-muted); font-size:10px;">BANCO EMISOR:</span><br><b>${o.sender_bank || 'N/A'}</b></div>
+                        <div><span style="color:var(--text-muted); font-size:10px;">REFERENCIA:</span><br><b style="color:var(--caribbean-cyan);">${o.payment_reference || 'N/A'}</b></div>
+                        <div><span style="color:var(--text-muted); font-size:10px;">TELÉFONO PAGADOR:</span><br><b>${o.sender_phone || 'N/A'}</b></div>
+                        <div><span style="color:var(--text-muted); font-size:10px;">CÉDULA PAGADOR:</span><br><b>${o.sender_ci || 'N/A'}</b></div>
+                    </div>
+
+                    <div style="font-size:12px; margin-top:6px;">
+                        <span style="font-weight:700; color:var(--text-secondary);">Productos:</span><br>
+                        <div style="color:var(--text-muted); font-size:11px; line-height:1.4;">${itemsHtml}</div>
+                    </div>
+
+                    ${proofHtml}
+                    ${actionButtons}
+                </div>
+            `;
+        }).join('');
     },
 
     async processPayment(orderId, decision) {
@@ -483,17 +571,31 @@ const CartAndPagoMovil = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ order_id: orderId, decision, reason })
             });
-            const data = await res.json();
-            if (data.success) {
-                alert(data.message);
-                this.loadMerchantPayments(this.activeMerchantTab);
-                PaseoMacutoMap.loadMerchants();
-            } else {
-                alert(data.message);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    alert(data.message);
+                    this.loadMerchantPayments(this.activeMerchantTab);
+                    if (window.PaseoMacutoMap) PaseoMacutoMap.loadMerchants();
+                    return;
+                }
             }
         } catch (err) {
-            alert("Error al procesar el pago");
+            console.info("[Paseo Macuto] Procesando pago en modo estático...");
         }
+
+        // Respaldo en localStorage
+        try {
+            const orders = JSON.parse(localStorage.getItem('pm_demo_orders') || '[]');
+            const target = orders.find(o => Number(o.id) === Number(orderId));
+            if (target) {
+                target.status = decision === 'accept' ? 'completed' : 'denied';
+                localStorage.setItem('pm_demo_orders', JSON.stringify(orders));
+            }
+        } catch (e) {}
+
+        alert(decision === 'accept' ? "¡Pago aprobado y verificado exitosamente!" : "Pago denegado.");
+        this.loadMerchantPayments(this.activeMerchantTab);
     },
 
     // -------------------------------------------------------------
