@@ -350,6 +350,7 @@ const CartAndPagoMovil = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            if (!res.ok) throw new Error("Backend PHP no disponible");
             const data = await res.json();
 
             if (submitBtn) {
@@ -358,6 +359,42 @@ const CartAndPagoMovil = {
             }
 
             if (data.success) {
+                const merchantObj = (window.PaseoMacutoMap && PaseoMacutoMap.allMerchants) 
+                    ? PaseoMacutoMap.allMerchants.find(x => Number(x.id) === Number(merchantId))
+                    : null;
+                const commercialName = (document.getElementById('pm-vendor-name') && document.getElementById('pm-vendor-name').innerText) 
+                    ? document.getElementById('pm-vendor-name').innerText 
+                    : (merchantObj ? merchantObj.commercial_name : 'Comercio Paseo Macuto');
+
+                try {
+                    const existingOrders = JSON.parse(localStorage.getItem('pm_demo_orders') || '[]');
+                    const newOrder = {
+                        id: data.order_id || Math.floor(1000 + Math.random() * 9000),
+                        merchant_id: merchantId,
+                        commercial_name: commercialName,
+                        visitor_name: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.name : 'Turista Visitante'),
+                        visitor_email: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.email : 'turista@paseomacuto.com'),
+                        visitor_phone: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.phone : senderPhone),
+                        amount_usd: totalUsd,
+                        amount_bs: totalUsd * (PaseoMacutoUI.bcvRate || 54.50),
+                        items_json: JSON.stringify(this.cart),
+                        sender_bank: senderBank,
+                        sender_phone: senderPhone,
+                        sender_ci: senderCi,
+                        payment_reference: paymentReference,
+                        proof_image: this.proofBase64 || '',
+                        status: 'pending_verification',
+                        created_at: new Date().toLocaleString()
+                    };
+                    existingOrders.unshift(newOrder);
+                    localStorage.setItem('pm_demo_orders', JSON.stringify(existingOrders));
+                } catch (e) {}
+
+                if (PaseoMacutoUI.currentUser) {
+                    PaseoMacutoUI.currentUser.xp = (PaseoMacutoUI.currentUser.xp || 150) + 25;
+                    try { localStorage.setItem('pm_demo_user', JSON.stringify(PaseoMacutoUI.currentUser)); } catch (e) {}
+                }
+
                 PaseoMacutoUI.closeModal('modal-pagomovil-checkout');
                 this.cart = [];
                 this.saveCartToStorage();
@@ -365,6 +402,10 @@ const CartAndPagoMovil = {
                 // Mensaje emergente requerido
                 document.getElementById('verified-pending-order-id').innerText = `#${data.order_id}`;
                 PaseoMacutoUI.openModal('modal-payment-pending-notice');
+
+                if (window.GamificationSystem) {
+                    GamificationSystem.showXpAwardNotice(25, 1, '¡Pago móvil enviado a verificación!');
+                }
             } else {
                 alert(data.message);
             }
@@ -376,6 +417,12 @@ const CartAndPagoMovil = {
             }
 
             const orderId = Math.floor(1000 + Math.random() * 9000);
+            const merchantObj = (window.PaseoMacutoMap && PaseoMacutoMap.allMerchants) 
+                ? PaseoMacutoMap.allMerchants.find(x => Number(x.id) === Number(merchantId))
+                : null;
+            const commercialName = (document.getElementById('pm-vendor-name') && document.getElementById('pm-vendor-name').innerText) 
+                ? document.getElementById('pm-vendor-name').innerText 
+                : (merchantObj ? merchantObj.commercial_name : 'Comercio Paseo Macuto');
             
             // Guardar orden demo en localStorage para persistencia
             try {
@@ -383,7 +430,7 @@ const CartAndPagoMovil = {
                 const newOrder = {
                     id: orderId,
                     merchant_id: merchantId,
-                    commercial_name: (document.getElementById('pm-vendor-name') ? document.getElementById('pm-vendor-name').innerText : 'Comercio Paseo Macuto'),
+                    commercial_name: commercialName,
                     visitor_name: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.name : 'Turista Visitante'),
                     visitor_email: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.email : 'turista@paseomacuto.com'),
                     visitor_phone: (PaseoMacutoUI.currentUser ? PaseoMacutoUI.currentUser.phone : senderPhone),
@@ -401,6 +448,11 @@ const CartAndPagoMovil = {
                 existingOrders.unshift(newOrder);
                 localStorage.setItem('pm_demo_orders', JSON.stringify(existingOrders));
             } catch (e) {}
+
+            if (PaseoMacutoUI.currentUser) {
+                PaseoMacutoUI.currentUser.xp = (PaseoMacutoUI.currentUser.xp || 150) + 25;
+                try { localStorage.setItem('pm_demo_user', JSON.stringify(PaseoMacutoUI.currentUser)); } catch (e) {}
+            }
 
             PaseoMacutoUI.closeModal('modal-pagomovil-checkout');
             this.cart = [];

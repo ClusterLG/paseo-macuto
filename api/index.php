@@ -1855,7 +1855,7 @@ switch ($action) {
                 $vData = $vStmt->fetch();
 
                 // Pagos pendientes por verificar
-                $pStmt = $pdo->prepare("SELECT COUNT(*) FROM orders_transactions WHERE merchant_id = ? AND status = 'pending'");
+                $pStmt = $pdo->prepare("SELECT COUNT(*) FROM orders_transactions WHERE merchant_id = ? AND status IN ('pending', 'pending_verification')");
                 $pStmt->execute([$merchant['id']]);
                 $pendingCount = intval($pStmt->fetchColumn());
 
@@ -1892,7 +1892,7 @@ switch ($action) {
             $globalSales = $globalSalesStmt->fetch();
 
             $pendingRifs = intval($pdo->query("SELECT COUNT(*) FROM merchants WHERE rif_verified = 0")->fetchColumn());
-            $pendingPayments = intval($pdo->query("SELECT COUNT(*) FROM orders_transactions WHERE status = 'pending'")->fetchColumn());
+            $pendingPayments = intval($pdo->query("SELECT COUNT(*) FROM orders_transactions WHERE status IN ('pending', 'pending_verification')")->fetchColumn());
 
             $kpis = [
                 'type' => 'superadmin',
@@ -1911,7 +1911,7 @@ switch ($action) {
             $cStmt->execute([$userId]);
             $cData = $cStmt->fetch();
 
-            $pStmt = $pdo->prepare("SELECT COUNT(*) FROM orders_transactions WHERE visitor_id = ? AND status = 'pending'");
+            $pStmt = $pdo->prepare("SELECT COUNT(*) FROM orders_transactions WHERE visitor_id = ? AND status IN ('pending', 'pending_verification')");
             $pStmt->execute([$userId]);
             $pendingCount = intval($pStmt->fetchColumn());
 
@@ -1976,7 +1976,7 @@ switch ($action) {
                             'color' => 'emerald',
                             'badge' => "+$" . number_format($ord['amount_usd'], 2)
                         ];
-                    } elseif ($ord['status'] === 'pending') {
+                    } elseif ($ord['status'] === 'pending' || $ord['status'] === 'pending_verification') {
                         $historyLog[] = [
                             'timestamp' => $ord['created_at'],
                             'time_formatted' => date('d/m/Y h:i A', strtotime($ord['created_at'])),
@@ -1987,7 +1987,7 @@ switch ($action) {
                             'color' => 'amber',
                             'badge' => 'Por Verificar'
                         ];
-                    } elseif ($ord['status'] === 'cancelled') {
+                    } elseif ($ord['status'] === 'cancelled' || $ord['status'] === 'denied') {
                         $historyLog[] = [
                             'timestamp' => $ord['verified_at'] ?: $ord['created_at'],
                             'time_formatted' => date('d/m/Y h:i A', strtotime($ord['verified_at'] ?: $ord['created_at'])),
@@ -2019,7 +2019,7 @@ switch ($action) {
                         'color' => 'emerald',
                         'badge' => 'Compra Efectiva'
                     ];
-                } elseif ($ord['status'] === 'pending') {
+                } elseif ($ord['status'] === 'pending' || $ord['status'] === 'pending_verification') {
                     $historyLog[] = [
                         'timestamp' => $ord['created_at'],
                         'time_formatted' => date('d/m/Y h:i A', strtotime($ord['created_at'])),
@@ -2030,7 +2030,7 @@ switch ($action) {
                         'color' => 'cyan',
                         'badge' => 'En Verificación'
                     ];
-                } elseif ($ord['status'] === 'cancelled') {
+                } elseif ($ord['status'] === 'cancelled' || $ord['status'] === 'denied') {
                     $historyLog[] = [
                         'timestamp' => $ord['verified_at'] ?: $ord['created_at'],
                         'time_formatted' => date('d/m/Y h:i A', strtotime($ord['verified_at'] ?: $ord['created_at'])),

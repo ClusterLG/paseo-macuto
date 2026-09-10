@@ -1238,7 +1238,7 @@ const PaseoMacutoUI = {
                     merchant_name: matchedMerchant ? matchedMerchant.commercial_name : (cur.name || 'Comercio Macuto'),
                     total_sales_usd: matchedMerchant ? (matchedMerchant.sales_count * 12.5) : 340.00,
                     completed_sales_count: matchedMerchant ? matchedMerchant.sales_count : 28,
-                    pending_verifications_count: 2,
+                    pending_verifications_count: 0,
                     reputation_stars: matchedMerchant ? parseFloat(matchedMerchant.total_rep || 4.9) : 4.9,
                     active_products_count: merchantProducts.length || 3,
                     complaints_count: 0,
@@ -1249,6 +1249,7 @@ const PaseoMacutoUI = {
                     total_sales_usd: 8450.00,
                     total_completed_sales: 640,
                     pending_rifs: 0,
+                    pending_payments_global: 0,
                     days_member: 45
                 } : {
                     total_spent_usd: 42.50,
@@ -1288,6 +1289,54 @@ const PaseoMacutoUI = {
                     }
                 ]
             };
+        }
+
+        // Integrar dinámicamente las órdenes registradas en este navegador (pm_demo_orders)
+        let localOrders = [];
+        try {
+            localOrders = JSON.parse(localStorage.getItem('pm_demo_orders') || '[]');
+        } catch (e) {}
+
+        const pendingLocalOrders = localOrders.filter(o => o.status === 'pending_verification' || o.status === 'pending');
+        const completedLocalOrders = localOrders.filter(o => o.status === 'completed');
+
+        if (data && data.kpis) {
+            const role = (data.user && data.user.role) || (this.currentUser ? this.currentUser.role : 'visitor');
+            if (role === 'merchant') {
+                const merchId = data.merchant_details ? data.merchant_details.id : null;
+                const pendingForThis = pendingLocalOrders.filter(o => !merchId || Number(o.merchant_id) === Number(merchId));
+                data.kpis.pending_verifications_count = (Number(data.kpis.pending_verifications_count) || 0) + pendingForThis.length;
+            } else if (role === 'superadmin') {
+                data.kpis.pending_payments_global = (Number(data.kpis.pending_payments_global) || 0) + pendingLocalOrders.length;
+            } else {
+                // Visitante
+                data.kpis.pending_purchases_count = (Number(data.kpis.pending_purchases_count) || 0) + pendingLocalOrders.length;
+                data.kpis.completed_purchases_count = (Number(data.kpis.completed_purchases_count) || 3) + completedLocalOrders.length;
+                const extraSpent = completedLocalOrders.reduce((sum, o) => sum + (parseFloat(o.amount_usd) || 0), 0);
+                data.kpis.total_spent_usd = (parseFloat(data.kpis.total_spent_usd) || 42.50) + extraSpent;
+            }
+        }
+
+        // Agregar las órdenes a la bitácora histórica
+        if (data && data.history && localOrders.length > 0) {
+            const existingOrderIds = new Set(data.history.map(h => {
+                const match = (h.title || '').match(/#(\d+)/);
+                return match ? match[1] : null;
+            }).filter(Boolean));
+
+            localOrders.forEach(o => {
+                if (o.id && existingOrderIds.has(String(o.id))) return;
+                const isPending = o.status === 'pending_verification' || o.status === 'pending';
+                const isCompleted = o.status === 'completed';
+                data.history.unshift({
+                    title: isPending ? `Pago Móvil en Verificación #${o.id}` : (isCompleted ? `Compra Aprobada #${o.id}` : `Pago Denegado #${o.id}`),
+                    badge: isPending ? '⏳ En Verificación' : (isCompleted ? '✓ Aprobado' : '✕ Denegado'),
+                    description: `Comercio: <b>${o.commercial_name || 'Comercio Macuto'}</b> • Monto: <b style="color:#06D6A0;">$${parseFloat(o.amount_usd || 0).toFixed(2)}</b> (${parseFloat(o.amount_bs || 0).toFixed(2)} Bs.) • Ref: <b style="color:var(--caribbean-cyan);">${o.payment_reference || 'N/A'}</b> • Banco: ${o.sender_bank || 'N/A'}`,
+                    time_formatted: o.created_at || 'Recién realizado',
+                    icon: isPending ? 'fas fa-hourglass-half' : (isCompleted ? 'fas fa-check-circle' : 'fas fa-times-circle'),
+                    color: isPending ? 'amber' : (isCompleted ? 'emerald' : 'coral')
+                });
+            });
         }
 
         try {
