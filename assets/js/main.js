@@ -177,11 +177,11 @@ const PaseoMacutoUI = {
                 <span style="font-size:12px; font-weight:700;">${this.currentUser.name ? this.currentUser.name.split(' ')[0] : 'Mi Cuenta'}</span>
                 <span style="font-size:10px; background:rgba(0,245,212,0.15); color:var(--caribbean-cyan); padding:2px 6px; border-radius:10px; font-weight:800;">${roleBadge}</span>
             `;
-            userBtn.onclick = () => this.openUserProfileModal();
+            userBtn.onclick = () => this.openRoleDashboard();
         }
 
-        // Actualizar datos en barra lateral si existen
-        this.updateSidebarUserInfo();
+        // Actualizar datos en barra lateral
+        this.updateRoleBasedSidebar();
     },
 
     renderGuestInterface() {
@@ -190,12 +190,29 @@ const PaseoMacutoUI = {
             userBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span style="font-size:12px; font-weight:700;">Acceder</span>`;
             userBtn.onclick = () => this.openModal('modal-auth');
         }
-        this.updateSidebarUserInfo();
+        this.updateRoleBasedSidebar();
+    },
+
+    updateSidebarUserInfo() {
+        this.updateRoleBasedSidebar();
+    },
+
+    openUserProfileModal() {
+        this.openRoleDashboard();
     },
 
     openRoleDashboard() {
-        if (!this.currentUser) return;
-        this.openUserProfileAndHistory();
+        if (!this.currentUser) {
+            this.openModal('modal-auth');
+            return;
+        }
+        if (this.currentUser.role === 'superadmin') {
+            this.openAdminDashboard();
+        } else if (this.currentUser.role === 'merchant') {
+            this.openMerchantDashboard();
+        } else {
+            this.openUserProfileAndHistory();
+        }
     },
 
     async handleLogin(e) {
@@ -213,9 +230,13 @@ const PaseoMacutoUI = {
             const data = await res.json();
             if (data.success) {
                 this.currentUser = data.user;
+                if (data.supabase_session && data.supabase_session.access_token) {
+                    localStorage.setItem('pm_sb_token', data.supabase_session.access_token);
+                }
                 this.renderUserInterface();
                 this.closeModal('modal-auth');
                 GamificationSystem.showXpAwardNotice(5, 1, '¡Bono diario por visita!');
+                this.openRoleDashboard();
             } else {
                 alert(data.message);
             }
@@ -231,7 +252,43 @@ const PaseoMacutoUI = {
             localStorage.setItem('pm_demo_user', JSON.stringify(this.currentUser));
             this.renderUserInterface();
             this.closeModal('modal-auth');
-            GamificationSystem.showXpAwardNotice(15, 1, '¡Sesión activa en modo demostración GitHub Pages!');
+            GamificationSystem.showXpAwardNotice(15, 1, '¡Sesión activa en modo demostración!');
+            this.openRoleDashboard();
+        }
+    },
+
+    openPasswordRecoveryModal() {
+        this.closeModal('modal-auth');
+        const loginEmail = document.getElementById('login-email');
+        if (loginEmail && loginEmail.value) {
+            const recEmail = document.getElementById('recover-email');
+            if (recEmail) recEmail.value = loginEmail.value;
+        }
+        this.openModal('modal-recover-password');
+    },
+
+    async handlePasswordRecovery(e) {
+        e.preventDefault();
+        const email = document.getElementById('recover-email').value;
+        const btn = document.getElementById('btn-submit-recover');
+        const originalText = btn ? btn.innerHTML : '';
+        if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+        try {
+            const res = await fetch('api/index.php?action=recover_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) {
+                this.closeModal('modal-recover-password');
+            }
+        } catch (err) {
+            alert("Error al contactar con el servicio de recuperación.");
+        } finally {
+            if (btn) btn.innerHTML = originalText;
         }
     },
 

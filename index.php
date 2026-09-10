@@ -425,7 +425,12 @@ $initialBcv = floatval($bcvStmt->fetchColumn() ?: 54.50);
                         <label>Contraseña</label>
                         <input type="password" id="login-password" class="form-control" required placeholder="••••••••">
                     </div>
-                    <button type="submit" class="btn-primary" style="margin-top:8px;">
+                    <div style="display:flex; justify-content:flex-end; margin-top:-6px;">
+                        <a href="javascript:void(0)" onclick="PaseoMacutoUI.openPasswordRecoveryModal()" style="font-size:12px; color:var(--caribbean-cyan); text-decoration:none; font-weight:700;">
+                            <i class="fas fa-key"></i> ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top:4px;">
                         <i class="fas fa-sign-in-alt"></i> Entrar a la Plataforma
                     </button>
                     <div style="font-size:11px; color:var(--text-muted); text-align:center; margin-top:6px;">
@@ -497,6 +502,33 @@ $initialBcv = floatval($bcvStmt->fetchColumn() ?: 54.50);
 
                     <button type="submit" class="btn-primary">
                         <i class="fas fa-check-circle"></i> Registrarme Ahora
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RECUPERACIÓN DE CONTRASEÑA SUPABASE CLOUD AUTH -->
+    <div class="modal-overlay" id="modal-recover-password">
+        <div class="modal-box" style="max-width:420px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-key" style="color:var(--caribbean-cyan);"></i> Recuperar Contraseña</h3>
+                <button class="modal-close-btn" onclick="PaseoMacutoUI.closeModal('modal-recover-password')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:14px; line-height:1.5;">
+                    Ingresa tu correo electrónico registrado. Te enviaremos un enlace seguro a través de <b>Supabase Cloud Auth</b> para restablecer tu contraseña.
+                </p>
+                <form onsubmit="PaseoMacutoUI.handlePasswordRecovery(event)" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" id="recover-email" class="form-control" required placeholder="tu-correo@ejemplo.com">
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-submit-recover" style="margin-top:6px;">
+                        <i class="fas fa-paper-plane"></i> Enviar Enlace de Recuperación
+                    </button>
+                    <button type="button" class="btn-secondary" style="margin-top:2px;" onclick="PaseoMacutoUI.closeModal('modal-recover-password'); PaseoMacutoUI.openModal('modal-auth', 'login');">
+                        <i class="fas fa-arrow-left"></i> Volver a Iniciar Sesión
                     </button>
                 </form>
             </div>
@@ -1191,9 +1223,9 @@ $initialBcv = floatval($bcvStmt->fetchColumn() ?: 54.50);
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- Scripts de la Aplicación -->
-    <script src="assets/js/gamification.js"></script>
-    <script src="assets/js/cart_pagomovil.js"></script>
-    <script src="assets/js/map.js"></script>
-    <script src="assets/js/main.js"></script>
+    <script src="assets/js/gamification.js?v=<?= time() ?>"></script>
+    <script src="assets/js/cart_pagomovil.js?v=<?= time() ?>"></script>
+    <script src="assets/js/map.js?v=<?= time() ?>"></script>
+    <script src="assets/js/main.js?v=<?= time() ?>"></script>
 </body>
 </html>

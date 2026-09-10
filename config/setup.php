@@ -6,9 +6,19 @@ function initializeDatabase() {
     $pdo = Database::getConnection();
     $driver = Database::getDriver();
 
-    $idType = ($driver === 'sqlite') ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'INT AUTO_INCREMENT PRIMARY KEY';
-    $textType = ($driver === 'sqlite') ? 'TEXT' : 'TEXT';
-    $timestampType = ($driver === 'sqlite') ? 'DATETIME DEFAULT CURRENT_TIMESTAMP' : 'DATETIME DEFAULT CURRENT_TIMESTAMP';
+    if ($driver === 'sqlite') {
+        $idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+        $textType = 'TEXT';
+        $timestampType = 'DATETIME DEFAULT CURRENT_TIMESTAMP';
+    } elseif ($driver === 'pgsql') {
+        $idType = 'SERIAL PRIMARY KEY';
+        $textType = 'TEXT';
+        $timestampType = 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP';
+    } else {
+        $idType = 'INT AUTO_INCREMENT PRIMARY KEY';
+        $textType = 'TEXT';
+        $timestampType = 'DATETIME DEFAULT CURRENT_TIMESTAMP';
+    }
 
     // 1. system_settings
     $pdo->exec("CREATE TABLE IF NOT EXISTS system_settings (
@@ -21,6 +31,7 @@ function initializeDatabase() {
     // 2. users
     $pdo->exec("CREATE TABLE IF NOT EXISTS users (
         id $idType,
+        supabase_uid VARCHAR(100),
         name VARCHAR(150) NOT NULL,
         email VARCHAR(150) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
@@ -31,6 +42,18 @@ function initializeDatabase() {
         status VARCHAR(50) DEFAULT 'active',
         created_at $timestampType
     )");
+
+    try {
+        if ($driver === 'pgsql' || $driver === 'mysql') {
+            $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS supabase_uid VARCHAR(100)");
+        } else {
+            // SQLite
+            $cols = $pdo->query("PRAGMA table_info(users)")->fetchAll(PDO::FETCH_COLUMN, 1);
+            if (!in_array('supabase_uid', $cols)) {
+                $pdo->exec("ALTER TABLE users ADD COLUMN supabase_uid VARCHAR(100)");
+            }
+        }
+    } catch (Exception $e) {}
 
     // 3. merchants
     $pdo->exec("CREATE TABLE IF NOT EXISTS merchants (
@@ -136,6 +159,11 @@ function initializeDatabase() {
         ip_address VARCHAR(45),
         created_at $timestampType
     )");
+    if ($driver === 'pgsql') {
+        try {
+            $pdo->exec("ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY");
+        } catch (Exception $e) {}
+    }
 
     // SEMILLA: Tasa de cambio BCV oficial y configuraciones
     $stmtRate = $pdo->prepare("SELECT COUNT(*) FROM system_settings WHERE setting_key = 'bcv_rate'");

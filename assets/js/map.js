@@ -198,9 +198,9 @@ const PaseoMacutoMap = {
                             ${verifiedBadge}
                         </div>
                         <div class="popup-reputation-badges">
-                            <span class="reputation-stars-pill"><i class="fas fa-star"></i> ${m.total_rep.toFixed(1)}</span>
-                            <span style="color:var(--text-muted);">(${m.sales_count} ventas)</span>
-                            <span style="margin-left:auto; font-weight:700; color:var(--caribbean-cyan);">${m.sector}</span>
+                            <span class="reputation-stars-pill"><i class="fas fa-star"></i> ${parseFloat(m.total_rep || 5).toFixed(1)}</span>
+                            <span style="color:var(--text-muted);">(${m.sales_count || 0} ventas)</span>
+                            <span style="margin-left:auto; font-weight:700; color:var(--caribbean-cyan);">${m.sector || ''}</span>
                         </div>
                         <div class="popup-desc">${m.description || 'Comercio local en Paseo Macuto'}</div>
                         <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px;">
@@ -218,7 +218,9 @@ const PaseoMacutoMap = {
                 </div>
             `;
 
-            const marker = L.marker([m.lat, m.lng], { icon: customIcon });
+            const mLat = parseFloat(m.lat) || 10.6067;
+            const mLng = parseFloat(m.lng) || -66.8940;
+            const marker = L.marker([mLat, mLng], { icon: customIcon });
             marker.bindPopup(popupContent);
             this.markersGroup.addLayer(marker);
         });
@@ -244,8 +246,12 @@ const PaseoMacutoMap = {
                 ? `<span class="badge-verified"><i class="fas fa-check-circle"></i> Verificado</span>`
                 : `<span class="badge-pending">Pendiente</span>`;
 
+            const mLat = parseFloat(m.lat) || 10.6067;
+            const mLng = parseFloat(m.lng) || -66.8940;
+            const rep = parseFloat(m.total_rep || 5).toFixed(1);
+
             return `
-                <div class="merchant-compact-card" onclick="PaseoMacutoMap.focusMerchant(${m.lat}, ${m.lng}, ${m.id})">
+                <div class="merchant-compact-card" onclick="PaseoMacutoMap.focusMerchant(${mLat}, ${mLng}, ${m.id})">
                     <div class="merchant-card-avatar">
                         <i class="fas ${style.icon}"></i>
                     </div>
@@ -255,11 +261,11 @@ const PaseoMacutoMap = {
                             ${verifiedBadge}
                         </div>
                         <div class="merchant-card-meta">
-                            <span class="reputation-stars-pill"><i class="fas fa-star"></i> ${m.total_rep.toFixed(1)}</span>
+                            <span class="reputation-stars-pill"><i class="fas fa-star"></i> ${rep}</span>
                             <span>•</span>
                             <span>${m.category}</span>
                             <span>•</span>
-                            <span>${m.product_count} productos</span>
+                            <span>${m.product_count || 0} productos</span>
                         </div>
                         <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
                             <i class="fas fa-map-marker-alt"></i> ${m.sector}

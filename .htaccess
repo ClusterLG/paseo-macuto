@@ -1,0 +1,2 @@
+# Priorizar index.php sobre index.html en Apache
+DirectoryIndex index.php index.html

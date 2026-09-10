@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once dirname(__DIR__) . '/config/database.php';
 require_once dirname(__DIR__) . '/config/setup.php';
+require_once dirname(__DIR__) . '/config/supabase_auth.php';
 
 $pdo = Database::getConnection();
 
@@ -875,16 +876,57 @@ switch ($action) {
     // 6. AUTENTICACIÓN Y SESIÓN
     // -------------------------------------------------------------
     case 'login':
-        $email = trim($_POST['email'] ?? '');
+        $email = strtolower(trim($_POST['email'] ?? ''));
         $password = $_POST['password'] ?? '';
 
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
+        if (empty($email) || empty($password)) {
+            $response = ['success' => false, 'message' => 'Ingrese correo y contraseña'];
+            break;
+        }
 
-        if ($user && password_verify($password, $user['password_hash'])) {
+        $user = null;
+        $supabaseSession = null;
+
+        // 1. Intentar autenticar contra Supabase Auth en la nube
+        if (SupabaseAuthService::isConfigured()) {
+            $sbRes = SupabaseAuthService::signInWithPassword($email, $password);
+            if ($sbRes['success']) {
+                $supabaseSession = [
+                    'access_token' => $sbRes['access_token'],
+                    'refresh_token' => $sbRes['refresh_token'],
+                    'expires_in' => $sbRes['expires_in']
+                ];
+                $sbUid = $sbRes['user']['id'] ?? null;
+
+                // Buscar perfil del usuario en la base de datos
+                $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? OR supabase_uid = ?");
+                $stmt->execute([$email, $sbUid]);
+                $user = $stmt->fetch();
+
+                // Si no tiene supabase_uid guardado, vincularlo
+                if ($user && empty($user['supabase_uid']) && $sbUid) {
+                    $pdo->prepare("UPDATE users SET supabase_uid = ? WHERE id = ?")->execute([$sbUid, $user['id']]);
+                }
+            }
+        }
+
+        // 2. Si Supabase Auth no autenticó o está en transición, fallback seguro a public.users
+        if (!$user) {
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $localUser = $stmt->fetch();
+
+            if ($localUser && password_verify($password, $localUser['password_hash'])) {
+                $user = $localUser;
+            }
+        }
+
+        if ($user) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_role'] = $user['role'];
+            if ($supabaseSession) {
+                $_SESSION['supabase_access_token'] = $supabaseSession['access_token'];
+            }
 
             // Si es comerciante, buscar su comercio
             $merchantInfo = null;
@@ -902,6 +944,8 @@ switch ($action) {
             $response = [
                 'success' => true,
                 'message' => '¡Bienvenido a Paseo Macuto, ' . htmlspecialchars($user['name']) . '!',
+                'supabase_auth' => ($supabaseSession !== null),
+                'supabase_session' => $supabaseSession,
                 'user' => [
                     'id' => $user['id'],
                     'name' => $user['name'],
@@ -913,6 +957,31 @@ switch ($action) {
             ];
         } else {
             $response = ['success' => false, 'message' => 'Correo o contraseña incorrectos'];
+        }
+        break;
+
+    case 'recover_password':
+        $email = strtolower(trim($_POST['email'] ?? ''));
+        if (empty($email)) {
+            $response = ['success' => false, 'message' => 'Ingrese su correo electrónico para recuperación'];
+            break;
+        }
+
+        if (SupabaseAuthService::isConfigured()) {
+            $recRes = SupabaseAuthService::resetPasswordForEmail($email);
+            if ($recRes['success']) {
+                $response = [
+                    'success' => true,
+                    'message' => 'Se ha enviado un correo con instrucciones de restablecimiento de contraseña.'
+                ];
+            } else {
+                $response = [
+                    'success' => false,
+                    'message' => 'No se pudo enviar el correo de recuperación: ' . $recRes['error']
+                ];
+            }
+        } else {
+            $response = ['success' => false, 'message' => 'Servicio de recuperación no disponible en este momento'];
         }
         break;
 
@@ -963,9 +1032,21 @@ switch ($action) {
             }
         }
 
+        // Registrar en Supabase Auth si está configurado
+        $supabaseUid = null;
+        if (SupabaseAuthService::isConfigured()) {
+            $sbRes = SupabaseAuthService::signUp($email, $password, [
+                'name' => $name,
+                'role' => $role
+            ]);
+            if ($sbRes['success'] && !empty($sbRes['user']['id'])) {
+                $supabaseUid = $sbRes['user']['id'];
+            }
+        }
+
         $passHash = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, password_hash, role, level, xp, phone) VALUES (?, ?, ?, ?, 1, 0, ?)");
-        $stmt->execute([$name, $email, $passHash, $role, $phone]);
+        $stmt = $pdo->prepare("INSERT INTO users (name, email, password_hash, role, level, xp, phone, supabase_uid) VALUES (?, ?, ?, ?, 1, 0, ?, ?)");
+        $stmt->execute([$name, $email, $passHash, $role, $phone, $supabaseUid]);
         $newUserId = $pdo->lastInsertId();
 
         // Si es comerciante, crear su registro de establecimiento con RIF en estado pendiente (0) y sin ubicación en mapa (0, 0)
