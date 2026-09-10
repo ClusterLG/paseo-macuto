@@ -109,14 +109,30 @@ const PaseoMacutoMap = {
             if (category !== 'all') url += `&category=${encodeURIComponent(category)}`;
             if (search) url += `&search=${encodeURIComponent(search)}`;
 
-            const res = await fetch(url);
-            const data = await res.json();
+            let data;
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                data = await res.json();
+            } catch (fetchErr) {
+                // Modo estático (ej: GitHub Pages)
+                console.info("[Paseo Macuto] Cargando catálogo estático para GitHub Pages...");
+                const res = await fetch('data/static_data.json');
+                data = await res.json();
+            }
 
-            if (data.success) {
-                this.allMerchants = data.merchants;
+            if (data && data.success) {
+                this.allMerchants = data.merchants || [];
+                let displayMerchants = this.allMerchants;
+                if (category !== 'all') {
+                    displayMerchants = displayMerchants.filter(m => (m.category || '').toLowerCase().includes(category.toLowerCase()));
+                }
+                if (search) {
+                    displayMerchants = displayMerchants.filter(m => (m.name || m.commercial_name || '').toLowerCase().includes(search.toLowerCase()));
+                }
                 this.bcvRate = data.bcv_rate || 54.50;
-                this.renderMarkers(this.allMerchants);
-                this.renderBottomList(this.allMerchants);
+                this.renderMarkers(displayMerchants);
+                this.renderBottomList(displayMerchants);
             }
         } catch (err) {
             console.error("Error al cargar comercios de Paseo Macuto:", err);

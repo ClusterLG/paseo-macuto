@@ -79,13 +79,15 @@ const PaseoMacutoUI = {
     async loadSettings() {
         try {
             const res = await fetch('api/index.php?action=get_settings');
+            if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
             if (data.success) {
                 this.bcvRate = data.bcv_rate || 54.50;
                 this.updateBcvWidget(this.bcvRate, data.bcv_updated_at);
             }
         } catch (err) {
-            console.error("Error al cargar tasa BCV:", err);
+            this.bcvRate = 54.50;
+            this.updateBcvWidget(54.50, 'Oficial');
         }
     },
 
@@ -140,18 +142,26 @@ const PaseoMacutoUI = {
     async checkSession() {
         try {
             const res = await fetch('api/index.php?action=current_user');
+            if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
             if (data.success) {
                 this.currentUser = data.user;
                 this.renderUserInterface();
-            } else {
-                this.currentUser = null;
-                this.renderGuestInterface();
+                return;
             }
         } catch (err) {
-            this.currentUser = null;
-            this.renderGuestInterface();
+            // Modo demostración en GitHub Pages
+            const demoUser = localStorage.getItem('pm_demo_user');
+            if (demoUser) {
+                try {
+                    this.currentUser = JSON.parse(demoUser);
+                    this.renderUserInterface();
+                    return;
+                } catch (e) {}
+            }
         }
+        this.currentUser = null;
+        this.renderGuestInterface();
     },
 
     renderUserInterface() {
@@ -163,27 +173,24 @@ const PaseoMacutoUI = {
             else roleBadge = `Lv.${this.currentUser.level_data ? this.currentUser.level_data.level : 1}`;
 
             userBtn.innerHTML = `
-                <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700;">
-                    <i class="fas fa-user-circle" style="font-size:18px;"></i>
-                    <span style="max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this.currentUser.name}</span>
-                    <span style="background:var(--caribbean-cyan); color:#fff; padding:2px 6px; border-radius:10px; font-size:10px;">${roleBadge}</span>
-                </div>
+                <i class="fas fa-user-circle"></i> 
+                <span style="font-size:12px; font-weight:700;">${this.currentUser.name ? this.currentUser.name.split(' ')[0] : 'Mi Cuenta'}</span>
+                <span style="font-size:10px; background:rgba(0,245,212,0.15); color:var(--caribbean-cyan); padding:2px 6px; border-radius:10px; font-weight:800;">${roleBadge}</span>
             `;
-            userBtn.onclick = () => this.openRoleDashboard();
+            userBtn.onclick = () => this.openUserProfileModal();
         }
-        this.updateRoleBasedSidebar();
+
+        // Actualizar datos en barra lateral si existen
+        this.updateSidebarUserInfo();
     },
 
     renderGuestInterface() {
         const userBtn = document.getElementById('btn-user-profile');
         if (userBtn) {
             userBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span style="font-size:12px; font-weight:700;">Acceder</span>`;
-            userBtn.onclick = () => this.openModal('modal-auth', 'login');
+            userBtn.onclick = () => this.openModal('modal-auth');
         }
-        if (typeof CartAndPagoMovil !== 'undefined') {
-            CartAndPagoMovil.clearCart();
-        }
-        this.updateRoleBasedSidebar();
+        this.updateSidebarUserInfo();
     },
 
     openRoleDashboard() {
@@ -202,6 +209,7 @@ const PaseoMacutoUI = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
+            if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
             if (data.success) {
                 this.currentUser = data.user;
@@ -212,7 +220,18 @@ const PaseoMacutoUI = {
                 alert(data.message);
             }
         } catch (err) {
-            alert("Error al iniciar sesión");
+            // Modo Demostración en vivo en GitHub Pages
+            if (email.includes('admin') || password.includes('admin')) {
+                this.currentUser = { id: 1, name: 'Leonardo Morales (Admin)', email: email, role: 'superadmin', level: 10, xp: 5000 };
+            } else if (email.includes('kiosco') || email.includes('comercio') || email.includes('pataruko')) {
+                this.currentUser = { id: 2, name: 'Kiosco El Pataruko', email: email, role: 'merchant', level: 5, xp: 1200 };
+            } else {
+                this.currentUser = { id: 99, name: email.split('@')[0] || 'Turista Playero', email: email, role: 'visitor', level: 2, xp: 150 };
+            }
+            localStorage.setItem('pm_demo_user', JSON.stringify(this.currentUser));
+            this.renderUserInterface();
+            this.closeModal('modal-auth');
+            GamificationSystem.showXpAwardNotice(15, 1, '¡Sesión activa en modo demostración GitHub Pages!');
         }
     },
 
@@ -238,6 +257,7 @@ const PaseoMacutoUI = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
             if (data.success) {
                 this.currentUser = data.user;
@@ -254,12 +274,20 @@ const PaseoMacutoUI = {
                 alert(data.message);
             }
         } catch (err) {
-            alert("Error al registrarse");
+            // Modo Demostración en vivo en GitHub Pages
+            this.currentUser = { id: Date.now(), name: name || 'Nuevo Usuario', email: email, role: role, level: 1, xp: 50 };
+            localStorage.setItem('pm_demo_user', JSON.stringify(this.currentUser));
+            this.renderUserInterface();
+            this.closeModal('modal-auth');
+            GamificationSystem.showXpAwardNotice(25, 1, '¡Bienvenido a Paseo Macuto en GitHub Pages!');
         }
     },
 
     async handleLogout() {
-        await fetch('api/index.php?action=logout');
+        try {
+            await fetch('api/index.php?action=logout');
+        } catch (e) {}
+        localStorage.removeItem('pm_demo_user');
         this.currentUser = null;
         if (typeof CartAndPagoMovil !== 'undefined') {
             CartAndPagoMovil.clearCart();
@@ -747,11 +775,27 @@ const PaseoMacutoUI = {
     // -------------------------------------------------------------
     async openMerchantDetail(merchantId) {
         try {
-            const res = await fetch(`api/index.php?action=get_merchant_detail&id=${merchantId}`);
-            const data = await res.json();
-            if (data.success) {
-                const m = data.merchant;
-                document.getElementById('detail-merch-title').innerText = m.commercial_name;
+            let m = null;
+            try {
+                const res = await fetch(`api/index.php?action=get_merchant_detail&id=${merchantId}`);
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                const data = await res.json();
+                if (data.success) m = data.merchant;
+            } catch (apiErr) {
+                // Fallback para GitHub Pages
+                if (window.PaseoMacutoMap && window.PaseoMacutoMap.allMerchants) {
+                    m = window.PaseoMacutoMap.allMerchants.find(x => x.id == merchantId);
+                    if (m && m.products) {
+                        m.products = m.products.map(p => ({
+                            ...p,
+                            price_bs: p.price_usd * (window.PaseoMacutoMap.bcvRate || 54.50)
+                        }));
+                    }
+                }
+            }
+
+            if (m) {
+                document.getElementById('detail-merch-title').innerText = m.commercial_name || m.name;
                 document.getElementById('detail-merch-category').innerText = `${m.category} • ${m.sector}`;
                 document.getElementById('detail-merch-desc').innerText = m.description || '';
                 document.getElementById('detail-merch-rep').innerText = m.total_rep.toFixed(1);
