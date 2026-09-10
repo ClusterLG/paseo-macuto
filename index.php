@@ -102,17 +102,16 @@ $initialBcv = floatval($bcvStmt->fetchColumn() ?: 54.50);
         </div>
     </header>
 
-    <!-- BANNER DE OLAS MARINAS DINÁMICAS SVG (EFECTO OLEAJE PLAYERO) -->
+    <!-- BANNER DE OLAS MARINAS DINÁMICAS SVG (OLEAJE CONTINUO SIN DEFECTOS) -->
     <div class="beach-waves-banner">
-        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
             <defs>
-                <path id="gentle-wave-pm" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                <path id="gentle-wave-pm" d="M 0,50 C 150,90 350,10 500,50 C 650,90 850,10 1000,50 C 1150,90 1350,10 1500,50 C 1650,90 1850,10 2000,50 L 2000,120 L 0,120 Z" />
             </defs>
             <g class="banner-waves">
-                <use xlink:href="#gentle-wave-pm" x="48" y="0" />
-                <use xlink:href="#gentle-wave-pm" x="48" y="2" />
-                <use xlink:href="#gentle-wave-pm" x="48" y="4" />
-                <use xlink:href="#gentle-wave-pm" x="48" y="6" />
+                <use href="#gentle-wave-pm" x="0" y="0" />
+                <use href="#gentle-wave-pm" x="0" y="8" />
+                <use href="#gentle-wave-pm" x="0" y="16" />
             </g>
         </svg>
     </div>

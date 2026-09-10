@@ -22,14 +22,26 @@ const PaseoMacutoMap = {
         const ne = L.latLng(this.bounds.northEast[0], this.bounds.northEast[1]);
         const maxBounds = L.latLngBounds(sw, ne);
 
+        const isMobile = window.innerWidth <= 768;
+        const initialZoom = isMobile ? 16 : 17;
+        const initialCenter = isMobile ? [10.6062, -66.8940] : this.defaultCenter;
+
         this.map = L.map('map-view', {
-            center: this.defaultCenter,
-            zoom: 17,
-            minZoom: 15,
+            center: initialCenter,
+            zoom: initialZoom,
+            minZoom: 14,
             maxZoom: 19, // Límite de zoom calibrado para máxima nitidez
             maxBounds: maxBounds,
-            maxBoundsViscosity: 1.0, // Impide que el usuario arrastre el mapa fuera de Paseo Macuto
+            maxBoundsViscosity: 0.6, // Amortiguación elástica suave que evita tirones en móviles
             zoomControl: false
+        });
+
+        // Soporte de redimensionamiento fluido y reorientación en móviles
+        window.addEventListener('resize', () => {
+            if (this.map) this.map.invalidateSize();
+        });
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => { if (this.map) this.map.invalidateSize(); }, 250);
         });
 
         // 1. Capa Google Satelital Híbrido HD (Máxima resolución en Venezuela con etiquetas de calles y costa)
@@ -105,6 +117,15 @@ const PaseoMacutoMap = {
 
     async loadMerchants(category = 'all', search = '') {
         try {
+            const container = document.getElementById('merchant-list-scroll');
+            if (container && (!this.allMerchants || this.allMerchants.length === 0)) {
+                container.innerHTML = `
+                    <div class="merchant-skeleton-card"><div class="skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton-line title"></div><div class="skeleton-line subtitle"></div></div></div>
+                    <div class="merchant-skeleton-card"><div class="skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton-line title"></div><div class="skeleton-line subtitle"></div></div></div>
+                    <div class="merchant-skeleton-card"><div class="skeleton-avatar"></div><div class="skeleton-lines"><div class="skeleton-line title"></div><div class="skeleton-line subtitle"></div></div></div>
+                `;
+            }
+
             let url = `api/index.php?action=get_merchants`;
             if (category !== 'all') url += `&category=${encodeURIComponent(category)}`;
             if (search) url += `&search=${encodeURIComponent(search)}`;
@@ -133,6 +154,10 @@ const PaseoMacutoMap = {
                 this.bcvRate = data.bcv_rate || 54.50;
                 this.renderMarkers(displayMerchants);
                 this.renderBottomList(displayMerchants);
+
+                if (this.map) {
+                    setTimeout(() => this.map.invalidateSize(), 150);
+                }
             }
         } catch (err) {
             console.error("Error al cargar comercios de Paseo Macuto:", err);
@@ -229,6 +254,11 @@ const PaseoMacutoMap = {
     renderBottomList(merchants) {
         const container = document.getElementById('merchant-list-scroll');
         if (!container) return;
+
+        const titleEl = document.querySelector('.sheet-title span');
+        if (titleEl) {
+            titleEl.textContent = `Comercios de Paseo Macuto (${merchants.length})`;
+        }
 
         if (merchants.length === 0) {
             container.innerHTML = `

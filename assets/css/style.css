@@ -511,13 +511,64 @@ body {
 }
 
 .sheet-content-scroll {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: 14px 16px;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    height: 100%;
+    gap: 10px;
     scrollbar-width: thin;
+}
+
+/* Tarjetas Skeleton de Carga Playera */
+.merchant-skeleton-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.skeleton-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, rgba(0,180,216,0.08) 25%, rgba(0,180,216,0.22) 50%, rgba(0,180,216,0.08) 75%);
+    background-size: 200% 100%;
+    animation: pmShimmer 1.5s infinite;
+}
+
+.skeleton-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skeleton-line {
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(0,180,216,0.08) 25%, rgba(0,180,216,0.22) 50%, rgba(0,180,216,0.08) 75%);
+    background-size: 200% 100%;
+    animation: pmShimmer 1.5s infinite;
+}
+
+.skeleton-line.title {
+    width: 65%;
+    height: 14px;
+}
+
+.skeleton-line.subtitle {
+    width: 40%;
+}
+
+@keyframes pmShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 /* Tarjetas de Comercios en el Listado */
@@ -925,31 +976,184 @@ body {
     transform: translateX(0);
 }
 
-/* Adaptación Responsiva Móvil */
-@media (max-width: 640px) {
+/* ==========================================================================
+   OPTIMIZACIÓN RESPONSIVA Y ERGONOMÍA MÓVIL (ANTI-PARPADEO Y ULTRA NITIDEZ)
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* 1. Header fluido y sin desbordamiento */
     .top-header {
-        padding: 0 10px;
+        height: 56px;
+        padding: 0 8px;
+        gap: 6px;
     }
+    
+    .brand-section {
+        gap: 6px;
+    }
+    
+    .brand-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
     .brand-title h1 {
-        font-size: 15px;
+        font-size: 14px;
+        letter-spacing: -0.2px;
     }
+
     .brand-title span {
         display: none;
     }
+
+    .header-actions {
+        gap: 5px;
+    }
+
+    /* Ocultar texto en botones de ambiente: mostrar solo el icono playero */
+    .ambience-selector-group {
+        padding: 2px;
+        gap: 2px;
+    }
+
+    .ambience-option-btn {
+        padding: 4px 6px;
+        font-size: 12px;
+    }
+
+    .ambience-option-btn span {
+        display: none;
+    }
+
+    /* Clima costero compacto en móvil */
+    .coastal-weather-header-pill {
+        padding: 4px 8px;
+        font-size: 10px;
+        gap: 4px;
+    }
+    .coastal-weather-header-pill .pill-divider,
+    .coastal-weather-header-pill span:nth-child(4),
+    .coastal-weather-header-pill span:nth-child(6) {
+        display: none; /* Muestra solo el valor clave */
+    }
+
+    .bcv-widget-card {
+        padding: 3px 8px 3px 6px;
+        gap: 4px;
+    }
+
+    .bcv-flag {
+        width: 16px;
+        height: 16px;
+    }
+
     .bcv-label {
         display: none;
     }
+
     .bcv-rate {
-        font-size: 12px;
+        font-size: 11px;
     }
+
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+    #btn-user-profile {
+        padding: 5px 8px !important;
+    }
+
+    #btn-user-profile span {
+        display: none; /* Icono de acceso en móvil */
+    }
+
+    /* 2. Barra flotante y buscador */
     .map-floating-bar {
-        left: 10px;
-        right: 10px;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        gap: 6px;
     }
+
+    .search-input-box {
+        padding: 5px 12px;
+    }
+
+    .search-input-box input {
+        font-size: 13px;
+    }
+
+    .category-chip {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+
+    /* 3. Panel inferior colapsable móvil */
+    .bottom-sheet-panel {
+        border-top-left-radius: 18px;
+        border-top-right-radius: 18px;
+    }
+
+    .bottom-sheet-panel.half {
+        height: 240px;
+    }
+
+    .bottom-sheet-panel.expanded {
+        height: 78vh;
+    }
+
+    .bottom-sheet-panel.minimized {
+        transform: translateY(calc(100% - 44px));
+    }
+
+    /* 4. Olas marinas adaptadas a pantallas móviles */
+    .beach-waves-banner {
+        top: 56px;
+        height: 16px;
+    }
+
+    .banner-waves > use:nth-child(3) {
+        display: none; /* Optimización de GPU para teléfonos */
+    }
+
+    /* 5. Desactivar backdrop-filter en móviles para erradicar el parpadeo de texturas */
+    .top-header,
+    .search-input-box,
+    .category-chip,
+    .bottom-sheet-panel,
+    .modal-box {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .top-header {
+        background: var(--bg-surface) !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+
+    .bottom-sheet-panel {
+        background: var(--bg-surface) !important;
+    }
+
+    .search-input-box {
+        background: var(--bg-surface) !important;
+    }
+
+    .category-chip {
+        background: var(--bg-surface) !important;
+    }
+
     .modal-box {
         max-height: 94vh;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
+    }
+
+    .app-container {
+        height: calc(100vh - 56px);
+        height: calc(100dvh - 56px);
     }
 }
 
@@ -1642,56 +1846,101 @@ body {
     font-weight: 800;
 }
 
-/* Olas Marinas Animadas SVG para Paseo Macuto */
+/* ==========================================================================
+   OLAS MARINAS ANIMADAS SVG - OLEAJE NATURAL Y SIN DEFECTOS
+   ========================================================================== */
 .beach-waves-banner {
+    position: absolute;
+    top: 64px;
+    left: 0;
     width: 100%;
-    height: 38px;
+    height: 24px;
     overflow: hidden;
-    position: relative;
-    background: transparent;
     pointer-events: none;
     line-height: 0;
-    z-index: 999;
+    z-index: 850;
+    isolation: isolate;
+    contain: paint;
 }
 
 .beach-waves-banner svg {
+    display: block;
     width: 100%;
     height: 100%;
 }
 
 .banner-waves > use {
-    animation: moveWaveBanner 18s cubic-bezier(.55,.5,.45,.5) infinite;
+    animation: moveWaveBanner 16s linear infinite;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
 }
 
 .banner-waves > use:nth-child(1) {
-    animation-delay: -2s;
-    animation-duration: 6s;
+    animation-duration: 12s;
     fill: var(--wave-layer-1);
+    opacity: 0.90;
 }
 
 .banner-waves > use:nth-child(2) {
-    animation-delay: -3s;
-    animation-duration: 9s;
+    animation-duration: 18s;
+    animation-delay: -4s;
     fill: var(--wave-layer-2);
+    opacity: 0.75;
 }
 
 .banner-waves > use:nth-child(3) {
-    animation-delay: -4s;
-    animation-duration: 13s;
+    animation-duration: 25s;
+    animation-delay: -8s;
     fill: var(--wave-layer-3);
+    opacity: 0.60;
 }
 
-.banner-waves > use:nth-child(4) {
-    animation-delay: -5s;
-    animation-duration: 18s;
-    fill: var(--wave-layer-4);
-}
-
+/* Animación de oleaje continuo 100% libre de cortes o esquinas */
 @keyframes moveWaveBanner {
-    0% { transform: translate3d(-90px, 0, 0); }
-    50% { transform: translate3d(85px, 0, 0); }
-    100% { transform: translate3d(-90px, 0, 0); }
+    0% {
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        -webkit-transform: translate3d(-500px, 0, 0);
+        transform: translate3d(-500px, 0, 0);
+    }
 }
+
+/* ==========================================================================
+   ACELERACIÓN POR HARDWARE Y PROTECCIÓN ANTI-PARPADEO (ANTI-FLICKER ENGINE)
+   ========================================================================== */
+.leaflet-container {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+.leaflet-tile-pane {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+}
+
+.leaflet-tile {
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+.beach-marker-pin,
+.merchant-compact-card,
+.tool-fab {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
 
 
 
